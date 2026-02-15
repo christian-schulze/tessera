@@ -14,7 +14,7 @@ const readSockets = async () => {
 };
 
 const usage = () => {
-  console.error("Usage: node scripts/ipc-run.js <method> [command]");
+  console.error("Usage: bunx tsx scripts/ipc-run.ts <method> [command]");
   console.error("Methods: tree, ping, version, execute");
 };
 

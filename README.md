@@ -48,8 +48,8 @@ TESSERA_IPC=1 make nested
 Then use the IPC CLI:
 
 ```bash
-node scripts/ipc-run.js tree
-node scripts/ipc-run.js execute "splitv; focus right"
+bunx tsx scripts/ipc-run.ts tree
+bunx tsx scripts/ipc-run.ts execute "splitv; focus right"
 ```
 
 ## Review Notes
