@@ -1,0 +1,48 @@
+import { TreeBuilder } from "../../src/tree/tree-builder.ts";
+import { ContainerType, Layout } from "../../src/tree/container.ts";
+import { RootContainer } from "../../src/tree/root-container.ts";
+import { OutputContainer } from "../../src/tree/output-container.ts";
+import { WorkspaceContainer } from "../../src/tree/workspace-container.ts";
+import { SplitContainer } from "../../src/tree/split-container.ts";
+
+describe("TreeBuilder", () => {
+  it("builds a root tree from monitor info", () => {
+    const builder = new TreeBuilder();
+    const root = builder.build([
+      { index: 0, workArea: { x: 0, y: 0, width: 1920, height: 1080 } },
+      { index: 1, workArea: { x: 1920, y: 0, width: 1920, height: 1080 } },
+    ]);
+
+    expect(root).toBeInstanceOf(RootContainer);
+    expect(root.type).toBe(ContainerType.Root);
+    expect(root.children.length).toBe(2);
+
+    const output0 = root.children[0] as OutputContainer;
+    const output1 = root.children[1] as OutputContainer;
+
+    expect(output0).toBeInstanceOf(OutputContainer);
+    expect(output1).toBeInstanceOf(OutputContainer);
+    expect(output0.monitorIndex).toBe(0);
+    expect(output1.monitorIndex).toBe(1);
+
+    const ws0 = output0.children[0] as WorkspaceContainer;
+    const ws1 = output1.children[0] as WorkspaceContainer;
+
+    expect(ws0).toBeInstanceOf(WorkspaceContainer);
+    expect(ws1).toBeInstanceOf(WorkspaceContainer);
+    expect(ws0.visible).toBe(true);
+    expect(ws1.visible).toBe(true);
+    expect(ws0.rect).toEqual({ x: 0, y: 0, width: 1920, height: 1080 });
+    expect(ws1.rect).toEqual({ x: 1920, y: 0, width: 1920, height: 1080 });
+
+    const split0 = ws0.children[0] as SplitContainer;
+    const split1 = ws1.children[0] as SplitContainer;
+
+    expect(split0).toBeInstanceOf(SplitContainer);
+    expect(split1).toBeInstanceOf(SplitContainer);
+    expect(split0.layout).toBe(Layout.SplitH);
+    expect(split1.layout).toBe(Layout.SplitH);
+    expect(split0.rect).toEqual(ws0.rect);
+    expect(split1.rect).toEqual(ws1.rect);
+  });
+});
