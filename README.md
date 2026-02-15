@@ -42,7 +42,14 @@ make nested
 In another terminal:
 
 ```bash
-make looking-glass
+TESSERA_IPC=1 make nested
+```
+
+Then use the IPC CLI:
+
+```bash
+node scripts/ipc-run.js tree
+node scripts/ipc-run.js execute "splitv; focus right"
 ```
 
 ## Review Notes
