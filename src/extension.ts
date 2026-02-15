@@ -9,6 +9,7 @@ import { WindowTracker } from "./window-tracker.js";
 import { parseCommandString } from "./commands/parser.js";
 import { buildCommandEngine, findFocusedContainer, registerDefaultHandlers } from "./commands/index.js";
 import type { WindowAdapter } from "./commands/adapter.js";
+import { IpcServer } from "./ipc/server.js";
 
 type TesseraGlobal = {
   root: RootContainer;
@@ -20,6 +21,7 @@ type TesseraGlobal = {
 export default class TesseraExtension extends Extension {
   private root: RootContainer | null = null;
   private tracker: WindowTracker | null = null;
+  private ipcServer: IpcServer | null = null;
 
   enable(): void {
     const builder = new TreeBuilder();
@@ -64,23 +66,38 @@ export default class TesseraExtension extends Extension {
     const engine = buildCommandEngine();
     registerDefaultHandlers(engine);
 
+    const executeCommand = (command: string) => {
+      if (!this.root) {
+        return [{ success: false, message: "Root container is not ready" }];
+      }
+
+      const commands = parseCommandString(command);
+      const focused = findFocusedContainer(this.root);
+      return engine.executeBatch(commands, {
+        root: this.root,
+        focused,
+        adapter,
+      });
+    };
+
+    if (GLib.getenv("TESSERA_IPC") === "1") {
+      this.ipcServer = new IpcServer();
+      this.ipcServer.start({
+        execute: executeCommand,
+        tree: () => this.root?.toJSON(),
+        ping: () => ({ ok: true }),
+        version: () => ({
+          uuid: this.uuid,
+          version: (this.metadata as { version?: unknown } | undefined)?.version ?? null,
+        }),
+      });
+    }
+
     (globalThis as unknown as { __tessera?: TesseraGlobal }).__tessera = {
       root: this.root,
       tracker: this.tracker,
       tree: () => this.root?.toJSON(),
-      execute: (command: string) => {
-        if (!this.root) {
-          return [{ success: false, message: "Root container is not ready" }];
-        }
-
-        const commands = parseCommandString(command);
-        const focused = findFocusedContainer(this.root);
-        return engine.executeBatch(commands, {
-          root: this.root,
-          focused,
-          adapter,
-        });
-      },
+      execute: executeCommand,
     };
   }
 
@@ -89,8 +106,13 @@ export default class TesseraExtension extends Extension {
       this.tracker.stop();
     }
 
+    if (this.ipcServer) {
+      this.ipcServer.stop();
+    }
+
     this.tracker = null;
     this.root = null;
+    this.ipcServer = null;
     (globalThis as unknown as { __tessera?: TesseraGlobal }).__tessera =
       undefined;
   }
