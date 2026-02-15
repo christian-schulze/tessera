@@ -3,14 +3,30 @@ import net from "node:net";
 import path from "node:path";
 import { resolveSocketPath } from "../src/ipc/resolve.js";
 
-const runtimeDir = process.env.XDG_RUNTIME_DIR ?? "/tmp";
+const runtimeDirs = [
+  process.env.XDG_RUNTIME_DIR,
+  `/run/user/${process.getuid?.() ?? ""}`,
+  "/tmp",
+]
+  .filter((entry): entry is string => Boolean(entry))
+  .filter((entry, index, list) => list.indexOf(entry) === index);
 const socketPrefix = "tessera.sock.";
 
 const readSockets = async () => {
-  const entries = await fs.readdir(runtimeDir);
-  return entries
-    .filter((entry) => entry.startsWith(socketPrefix))
-    .map((entry) => path.join(runtimeDir, entry));
+  const sockets: string[] = [];
+  for (const runtimeDir of runtimeDirs) {
+    try {
+      const entries = await fs.readdir(runtimeDir);
+      sockets.push(
+        ...entries
+          .filter((entry) => entry.startsWith(socketPrefix))
+          .map((entry) => path.join(runtimeDir, entry))
+      );
+    } catch {
+      // ignore missing dirs
+    }
+  }
+  return sockets;
 };
 
 const usage = () => {
@@ -45,7 +61,9 @@ const run = async () => {
   const socketPath = resolveSocketPath(candidates);
 
   if (!socketPath) {
-    console.error("No Tessera IPC socket found.");
+    console.error(
+      `No Tessera IPC socket found. Checked: ${runtimeDirs.join(", ")}`
+    );
     process.exit(1);
   }
 

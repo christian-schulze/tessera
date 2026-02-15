@@ -41,6 +41,15 @@ const readAll = (stream: Gio.InputStream): string => {
   return new TextDecoder().decode(buffer);
 };
 
+const getPid = (): number => {
+  const glib = GLib as unknown as {
+    getpid?: () => number;
+    get_pid?: () => number;
+  };
+
+  return glib.getpid?.() ?? glib.get_pid?.() ?? 0;
+};
+
 export class IpcServer {
   private service: Gio.SocketService | null = null;
   private socketPath: string | null = null;
@@ -52,8 +61,12 @@ export class IpcServer {
     }
 
     const runtimeDir = GLib.getenv("XDG_RUNTIME_DIR") ?? "/tmp";
-    const pid = GLib.getpid();
+    const pid = getPid();
     const socketPath = buildSocketPath(runtimeDir, pid);
+
+    console.log(
+      `[tessera ipc] starting server pid=${pid} runtimeDir=${runtimeDir} socket=${socketPath}`
+    );
 
     try {
       GLib.unlink(socketPath);
@@ -67,10 +80,10 @@ export class IpcServer {
       address,
       Gio.SocketType.STREAM,
       Gio.SocketProtocol.DEFAULT,
-      null,
       null
     );
     service.connect("incoming", (_service, connection) => {
+      console.log("[tessera ipc] incoming connection");
       this.handleConnection(connection);
       return true;
     });
@@ -84,6 +97,10 @@ export class IpcServer {
   stop(): void {
     if (this.service) {
       this.service.stop();
+    }
+
+    if (this.socketPath) {
+      console.log(`[tessera ipc] stopping server socket=${this.socketPath}`);
     }
 
     this.service = null;
