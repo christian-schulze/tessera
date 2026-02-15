@@ -1,6 +1,6 @@
-import type { RootContainer } from "../tree/root-container.ts";
-import type { Container } from "../tree/container.ts";
-import type { WindowAdapter } from "./adapter.ts";
+import type { RootContainer } from "../tree/root-container.js";
+import type { Container } from "../tree/container.js";
+import type { WindowAdapter } from "./adapter.js";
 
 export interface CommandContext {
   root: RootContainer;

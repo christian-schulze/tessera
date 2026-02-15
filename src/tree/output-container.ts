@@ -1,5 +1,5 @@
-import type { ContainerJSON, Rect } from "./container.ts";
-import { Container, ContainerType } from "./container.ts";
+import type { ContainerJSON, Rect } from "./container.js";
+import { Container, ContainerType } from "./container.js";
 
 export interface OutputJSON extends ContainerJSON {
   monitorIndex: number;

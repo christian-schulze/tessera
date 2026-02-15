@@ -1,7 +1,7 @@
-import type { CommandCriteria, CriteriaOperator } from "./types.ts";
-import { Container } from "../tree/container.ts";
-import { WindowContainer } from "../tree/window-container.ts";
-import { WorkspaceContainer } from "../tree/workspace-container.ts";
+import type { CommandCriteria, CriteriaOperator } from "./types.js";
+import { Container } from "../tree/container.js";
+import { WindowContainer } from "../tree/window-container.js";
+import { WorkspaceContainer } from "../tree/workspace-container.js";
 
 const evaluateString = (
   value: string | null | undefined,

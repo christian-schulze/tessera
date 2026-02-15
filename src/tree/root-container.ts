@@ -1,5 +1,5 @@
-import type { OutputContainer } from "./output-container.ts";
-import { Container, ContainerType } from "./container.ts";
+import type { OutputContainer } from "./output-container.js";
+import { Container, ContainerType } from "./container.js";
 
 export class RootContainer extends Container {
   constructor(id: number) {

@@ -1,4 +1,4 @@
-import type { Rect } from "../tree/container.ts";
+import type { Rect } from "../tree/container.js";
 
 export interface WindowAdapter {
   activate: (window: unknown) => void;

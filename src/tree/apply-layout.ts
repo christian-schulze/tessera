@@ -1,7 +1,7 @@
-import type { Container } from "./container.ts";
-import { ContainerType, Rect } from "./container.ts";
-import type { WindowContainer } from "./window-container.ts";
-import type { WindowAdapter } from "../commands/adapter.ts";
+import type { Container } from "./container.js";
+import { ContainerType, Rect } from "./container.js";
+import type { WindowContainer } from "./window-container.js";
+import type { WindowAdapter } from "../commands/adapter.js";
 
 const applyGeometry = (adapter: WindowAdapter, window: unknown, rect: Rect): void => {
   adapter.moveResize(window, rect);

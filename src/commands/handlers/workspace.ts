@@ -1,8 +1,8 @@
-import type { CommandHandler, CommandResult } from "../types.ts";
-import type { CommandContext } from "../context.ts";
-import { Container, ContainerType } from "../../tree/container.ts";
-import { WindowContainer } from "../../tree/window-container.ts";
-import { WorkspaceContainer } from "../../tree/workspace-container.ts";
+import type { CommandHandler, CommandResult } from "../types.js";
+import type { CommandContext } from "../context.js";
+import { Container, ContainerType } from "../../tree/container.js";
+import { WindowContainer } from "../../tree/window-container.js";
+import { WorkspaceContainer } from "../../tree/workspace-container.js";
 
 const result = (success: boolean, message?: string): CommandResult => ({
   success,

@@ -1,15 +1,15 @@
-import { CommandEngine } from "./engine.ts";
-import type { CommandHandler } from "./types.ts";
-import { focusHandler, layoutHandler, moveHandler, resizeHandler, splitHandler } from "./handlers/core.ts";
+import { CommandEngine } from "./engine.js";
+import type { CommandHandler } from "./types.js";
+import { focusHandler, layoutHandler, moveHandler, resizeHandler, splitHandler } from "./handlers/core.js";
 import {
   floatingHandler,
   fullscreenHandler,
   markHandler,
   unmarkHandler,
   workspaceHandler,
-} from "./handlers/workspace.ts";
-import { execHandler, killHandler } from "./handlers/process.ts";
-import type { Container } from "../tree/container.ts";
+} from "./handlers/workspace.js";
+import { execHandler, killHandler } from "./handlers/process.js";
+import type { Container } from "../tree/container.js";
 
 const aliasHandler = (action: string, handler: CommandHandler): CommandHandler => ({
   action,

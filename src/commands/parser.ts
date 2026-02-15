@@ -1,4 +1,4 @@
-import { Command, CommandCriteria, CriteriaOperator } from "./types.ts";
+import { Command, CommandCriteria, CriteriaOperator } from "./types.js";
 
 const criteriaOperatorRegex = /(.*?)(!=|=)(.*)/;
 

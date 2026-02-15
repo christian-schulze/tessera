@@ -1,14 +1,14 @@
 import Meta from "gi://Meta";
 import Shell from "gi://Shell";
 
-import { reflow } from "./tree/reflow.ts";
-import { Container, ContainerType } from "./tree/container.ts";
-import { RootContainer } from "./tree/root-container.ts";
-import { SplitContainer } from "./tree/split-container.ts";
-import { WorkspaceContainer } from "./tree/workspace-container.ts";
-import { WindowContainer } from "./tree/window-container.ts";
-import { applyLayout } from "./tree/apply-layout.ts";
-import type { WindowAdapter } from "./commands/adapter.ts";
+import { reflow } from "./tree/reflow.js";
+import { Container, ContainerType } from "./tree/container.js";
+import { RootContainer } from "./tree/root-container.js";
+import { SplitContainer } from "./tree/split-container.js";
+import { WorkspaceContainer } from "./tree/workspace-container.js";
+import { WindowContainer } from "./tree/window-container.js";
+import { applyLayout } from "./tree/apply-layout.js";
+import type { WindowAdapter } from "./commands/adapter.js";
 
 export class WindowTracker {
   private root: RootContainer;

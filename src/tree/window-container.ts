@@ -1,5 +1,5 @@
-import type { ContainerJSON } from "./container.ts";
-import { Container, ContainerType } from "./container.ts";
+import type { ContainerJSON } from "./container.js";
+import { Container, ContainerType } from "./container.js";
 
 export interface WindowJSON extends ContainerJSON {
   windowId: number;

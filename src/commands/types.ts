@@ -13,7 +13,7 @@ export interface Command {
   criteria: CommandCriteria[];
 }
 
-import type { CommandContext } from "./context.ts";
+import type { CommandContext } from "./context.js";
 
 export interface CommandHandler {
   action: string;

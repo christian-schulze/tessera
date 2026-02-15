@@ -1,5 +1,5 @@
-import type { Command, CommandHandler, CommandResult } from "./types.ts";
-import type { CommandContext } from "./context.ts";
+import type { Command, CommandHandler, CommandResult } from "./types.js";
+import type { CommandContext } from "./context.js";
 
 export class CommandEngine {
   private handlers: Map<string, CommandHandler> = new Map();

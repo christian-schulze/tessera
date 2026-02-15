@@ -1,8 +1,8 @@
-import type { ContainerJSON, Rect } from "./types.ts";
-import { ContainerType, Layout } from "./types.ts";
+import type { ContainerJSON, Rect } from "./types.js";
+import { ContainerType, Layout } from "./types.js";
 
-export { ContainerType, Layout } from "./types.ts";
-export type { Rect, ContainerJSON } from "./types.ts";
+export { ContainerType, Layout } from "./types.js";
+export type { Rect, ContainerJSON } from "./types.js";
 
 export class Container {
   id: number;

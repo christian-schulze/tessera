@@ -1,12 +1,14 @@
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
-import { TreeBuilder } from "./tree/tree-builder.ts";
-import { RootContainer } from "./tree/root-container.ts";
-import { WindowTracker } from "./window-tracker.ts";
-import { parseCommandString } from "./commands/parser.ts";
-import { buildCommandEngine, findFocusedContainer, registerDefaultHandlers } from "./commands/index.ts";
-import type { WindowAdapter } from "./commands/adapter.ts";
+import Meta from "gi://Meta";
+import GLib from "gi://GLib";
+import { TreeBuilder } from "./tree/tree-builder.js";
+import { RootContainer } from "./tree/root-container.js";
+import { WindowTracker } from "./window-tracker.js";
+import { parseCommandString } from "./commands/parser.js";
+import { buildCommandEngine, findFocusedContainer, registerDefaultHandlers } from "./commands/index.js";
+import type { WindowAdapter } from "./commands/adapter.js";
 
 type TesseraGlobal = {
   root: RootContainer;
@@ -67,6 +69,10 @@ export default class TesseraExtension extends Extension {
       tracker: this.tracker,
       tree: () => this.root?.toJSON(),
       execute: (command: string) => {
+        if (!this.root) {
+          return [{ success: false, message: "Root container is not ready" }];
+        }
+
         const commands = parseCommandString(command);
         const focused = findFocusedContainer(this.root);
         return engine.executeBatch(commands, {
