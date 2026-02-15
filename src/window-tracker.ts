@@ -1,24 +1,43 @@
 import Meta from "gi://Meta";
 import Shell from "gi://Shell";
 
-import { reflow } from "./tree/reflow.js";
-import { Container, ContainerType, Rect } from "./tree/container.js";
-import { RootContainer } from "./tree/root-container.js";
-import { SplitContainer } from "./tree/split-container.js";
-import { WorkspaceContainer } from "./tree/workspace-container.js";
-import { WindowContainer } from "./tree/window-container.js";
+import { reflow } from "./tree/reflow.ts";
+import { Container, ContainerType } from "./tree/container.ts";
+import { RootContainer } from "./tree/root-container.ts";
+import { SplitContainer } from "./tree/split-container.ts";
+import { WorkspaceContainer } from "./tree/workspace-container.ts";
+import { WindowContainer } from "./tree/window-container.ts";
+import { applyLayout } from "./tree/apply-layout.ts";
+import type { WindowAdapter } from "./commands/adapter.ts";
 
 export class WindowTracker {
   private root: RootContainer;
   private windowMap: Map<number, WindowContainer>;
   private windowSignals: Map<number, number[]>;
   private displaySignal: number | null;
+  private adapter: WindowAdapter;
 
   constructor(root: RootContainer) {
     this.root = root;
     this.windowMap = new Map();
     this.windowSignals = new Map();
     this.displaySignal = null;
+    this.adapter = {
+      activate: () => {},
+      moveResize: (window: unknown, rect) => {
+        (window as Meta.Window).move_resize_frame(
+          true,
+          rect.x,
+          rect.y,
+          rect.width,
+          rect.height
+        );
+      },
+      setFullscreen: () => {},
+      setFloating: () => {},
+      close: () => {},
+      exec: () => {},
+    };
   }
 
   start(): void {
@@ -104,7 +123,7 @@ export class WindowTracker {
     this.attachWindowSignals(windowId, window, container);
 
     reflow(split);
-    this.applyLayout(split);
+    applyLayout(split, this.adapter);
   }
 
   private attachWindowSignals(
@@ -159,7 +178,7 @@ export class WindowTracker {
 
     if (parent) {
       reflow(parent);
-      this.applyLayout(parent);
+      applyLayout(parent, this.adapter);
     }
   }
 
@@ -176,21 +195,6 @@ export class WindowTracker {
     split.rect = { ...workspace.rect };
     workspace.addChild(split);
     return split;
-  }
-
-  private applyLayout(container: Container): void {
-    for (const child of container.children) {
-      if (child.type === ContainerType.Window) {
-        const windowContainer = child as WindowContainer;
-        this.applyGeometry(windowContainer.window as Meta.Window, child.rect);
-      } else if (child.children.length > 0) {
-        this.applyLayout(child);
-      }
-    }
-  }
-
-  private applyGeometry(window: Meta.Window, rect: Rect): void {
-    window.move_resize_frame(true, rect.x, rect.y, rect.width, rect.height);
   }
 
   private getWindowId(window: Meta.Window): number {
