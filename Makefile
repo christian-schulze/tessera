@@ -3,7 +3,7 @@ INSTALL_DIR = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 REPO_DIR = $(CURDIR)
 BUILD_DIR = $(CURDIR)/dist
 
-.PHONY: help build install uninstall enable disable restart nested lint test check clean
+.PHONY: help build install uninstall enable disable restart nested looking-glass lint test check clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -44,6 +44,13 @@ restart: build ## Rebuild and re-enable the extension
 
 nested: ## Launch a nested GNOME Shell session
 	dbus-run-session gnome-shell --devkit --wayland
+
+looking-glass: ## Open Looking Glass in current GNOME Shell session
+	gdbus call --session \
+		--dest org.gnome.Shell \
+		--object-path /org/gnome/Shell \
+		--method org.gnome.Shell.Eval \
+		"imports.ui.main.openLookingGlass();"
 
 lint: ## Run ESLint on source files
 	bunx eslint src/
