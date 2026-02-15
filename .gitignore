@@ -2,3 +2,5 @@
 node_modules/
 dist/
 *.shell-extension.zip
+.nested-bus
+looking-glass-debug.txt
