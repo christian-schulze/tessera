@@ -43,14 +43,22 @@ restart: build ## Rebuild and re-enable the extension
 	gnome-extensions disable $(UUID) && gnome-extensions enable $(UUID)
 
 nested: ## Launch a nested GNOME Shell session
-	dbus-run-session gnome-shell --devkit --wayland
+	dbus-run-session -- bash -lc 'echo "$$DBUS_SESSION_BUS_ADDRESS" > .nested-bus; gnome-shell --devkit --wayland'
 
 looking-glass: ## Open Looking Glass in current GNOME Shell session
-	gdbus call --session \
+	@if [ -f .nested-bus ]; then \
+		DBUS_SESSION_BUS_ADDRESS=$$(cat .nested-bus) gdbus call --session \
+			--dest org.gnome.Shell \
+			--object-path /org/gnome/Shell \
+			--method org.gnome.Shell.Eval \
+			"imports.ui.main.openLookingGlass();"; \
+	else \
+		gdbus call --session \
 		--dest org.gnome.Shell \
 		--object-path /org/gnome/Shell \
 		--method org.gnome.Shell.Eval \
 		"imports.ui.main.openLookingGlass();"
+	fi
 
 lint: ## Run ESLint on source files
 	bunx eslint src/
