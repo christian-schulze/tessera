@@ -13,6 +13,13 @@ export interface Command {
   criteria: CommandCriteria[];
 }
 
+import type { CommandContext } from "./context.ts";
+
+export interface CommandHandler {
+  action: string;
+  execute: (command: Command, context: CommandContext) => CommandResult;
+}
+
 export interface CommandResult {
   success: boolean;
   message?: string;
