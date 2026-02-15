@@ -1,6 +1,6 @@
 {
   "spec_dir": "tests",
-  "spec_files": ["unit/**/*.test.js"],
+  "spec_files": ["unit/**/*.test.ts"],
   "env": {
     "stopSpecOnExpectationFailure": false,
     "random": false

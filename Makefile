@@ -9,7 +9,7 @@ help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 build: ## Compile TypeScript to JavaScript
-	npx tsc
+	bunx tsc
 	cp metadata.json $(BUILD_DIR)/
 	@echo "Build complete: $(BUILD_DIR)/"
 
@@ -46,10 +46,10 @@ nested: ## Launch a nested GNOME Shell session
 	dbus-run-session gnome-shell --devkit --wayland
 
 lint: ## Run ESLint on source files
-	npx eslint src/
+	bunx eslint src/
 
 test: ## Run unit tests
-	npx jasmine --config=tests/jasmine.json
+	bunx tsx ./node_modules/jasmine/bin/jasmine.js --config=tests/jasmine.json
 
 check: lint build test ## Run all checks (lint, build, tests)
 	@echo "All checks passed"
