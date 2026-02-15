@@ -1,4 +1,4 @@
-import { Container, ContainerType, Layout } from "./container.js";
+import { Container, ContainerType, Layout } from "./container.ts";
 
 export class SplitContainer extends Container {
   constructor(id: number, layout: Layout = Layout.SplitH) {

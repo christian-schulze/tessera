@@ -1,8 +1,8 @@
-import type { Rect } from "./container.js";
-import { RootContainer } from "./root-container.js";
-import { OutputContainer } from "./output-container.js";
-import { WorkspaceContainer } from "./workspace-container.js";
-import { SplitContainer } from "./split-container.js";
+import type { Rect } from "./container.ts";
+import { RootContainer } from "./root-container.ts";
+import { OutputContainer } from "./output-container.ts";
+import { WorkspaceContainer } from "./workspace-container.ts";
+import { SplitContainer } from "./split-container.ts";
 
 export interface MonitorInfo {
   index: number;

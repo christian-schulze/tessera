@@ -1,5 +1,5 @@
-import type { ContainerJSON } from "./container.js";
-import { Container, ContainerType } from "./container.js";
+import type { ContainerJSON } from "./container.ts";
+import { Container, ContainerType } from "./container.ts";
 
 export interface WorkspaceJSON extends ContainerJSON {
   name: string;

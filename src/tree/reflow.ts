@@ -1,4 +1,4 @@
-import { Container, Layout } from "./container.js";
+import { Container, Layout } from "./container.ts";
 
 export interface GapConfig {
   inner?: number;
