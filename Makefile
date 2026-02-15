@@ -54,10 +54,10 @@ looking-glass: ## Open Looking Glass in current GNOME Shell session
 			"imports.ui.main.openLookingGlass();"; \
 	else \
 		gdbus call --session \
-		--dest org.gnome.Shell \
-		--object-path /org/gnome/Shell \
-		--method org.gnome.Shell.Eval \
-		"imports.ui.main.openLookingGlass();"
+			--dest org.gnome.Shell \
+			--object-path /org/gnome/Shell \
+			--method org.gnome.Shell.Eval \
+			"imports.ui.main.openLookingGlass();"; \
 	fi
 
 lint: ## Run ESLint on source files
