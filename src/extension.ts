@@ -10,6 +10,7 @@ import { parseCommandString } from "./commands/parser.js";
 import { buildCommandEngine, findFocusedContainer, registerDefaultHandlers } from "./commands/index.js";
 import type { WindowAdapter } from "./commands/adapter.js";
 import { IpcServer } from "./ipc/server.js";
+import { buildMonitorInfos } from "./monitors.js";
 
 type TesseraGlobal = {
   root: RootContainer;
@@ -25,10 +26,7 @@ export default class TesseraExtension extends Extension {
 
   enable(): void {
     const builder = new TreeBuilder();
-    const monitors = Main.layoutManager.monitors.map((monitor, index) => ({
-      index,
-      workArea: Main.layoutManager.getWorkAreaForMonitor(index),
-    }));
+    const monitors = buildMonitorInfos(Main.layoutManager, global.display);
 
     this.root = builder.build(monitors);
     this.tracker = new WindowTracker(this.root);

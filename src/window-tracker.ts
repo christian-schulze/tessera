@@ -9,12 +9,14 @@ import { WorkspaceContainer } from "./tree/workspace-container.js";
 import { WindowContainer } from "./tree/window-container.js";
 import { applyLayout } from "./tree/apply-layout.js";
 import type { WindowAdapter } from "./commands/adapter.js";
+import { updateFocusedWindow } from "./window-tracker-focus.js";
 
 export class WindowTracker {
   private root: RootContainer;
   private windowMap: Map<number, WindowContainer>;
   private windowSignals: Map<number, number[]>;
   private displaySignal: number | null;
+  private focusSignal: number | null;
   private adapter: WindowAdapter;
 
   constructor(root: RootContainer) {
@@ -22,6 +24,7 @@ export class WindowTracker {
     this.windowMap = new Map();
     this.windowSignals = new Map();
     this.displaySignal = null;
+    this.focusSignal = null;
     this.adapter = {
       activate: () => {},
       moveResize: (window: unknown, rect) => {
@@ -52,16 +55,32 @@ export class WindowTracker {
       }
     );
 
+    this.focusSignal = global.display.connect(
+      "notify::focus-window",
+      () => {
+        const focused = global.display.get_focus_window() as Meta.Window | null;
+        updateFocusedWindow(this.root, this.windowMap, focused);
+      }
+    );
+
     for (const actor of global.get_window_actors()) {
       const window = actor.meta_window as Meta.Window;
       this.trackWindow(window);
     }
+
+    const focused = global.display.get_focus_window() as Meta.Window | null;
+    updateFocusedWindow(this.root, this.windowMap, focused);
   }
 
   stop(): void {
     if (this.displaySignal !== null) {
       global.display.disconnect(this.displaySignal);
       this.displaySignal = null;
+    }
+
+    if (this.focusSignal !== null) {
+      global.display.disconnect(this.focusSignal);
+      this.focusSignal = null;
     }
 
     for (const [windowId, container] of this.windowMap.entries()) {
@@ -73,6 +92,7 @@ export class WindowTracker {
 
     this.windowMap.clear();
     this.windowSignals.clear();
+    updateFocusedWindow(this.root, this.windowMap, null);
   }
 
   getActiveWorkspace(): WorkspaceContainer | null {
@@ -180,6 +200,9 @@ export class WindowTracker {
       reflow(parent);
       applyLayout(parent, this.adapter);
     }
+
+    const focused = global.display.get_focus_window() as Meta.Window | null;
+    updateFocusedWindow(this.root, this.windowMap, focused);
   }
 
   private findSplitTarget(workspace: WorkspaceContainer): SplitContainer {
