@@ -1,0 +1,58 @@
+UUID = tessera@tessera.dev
+INSTALL_DIR = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
+REPO_DIR = $(CURDIR)
+BUILD_DIR = $(CURDIR)/dist
+
+.PHONY: help build install uninstall enable disable restart nested lint test check clean
+
+help: ## Show this help
+	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+build: ## Compile TypeScript to JavaScript
+	npx tsc
+	cp metadata.json $(BUILD_DIR)/
+	@echo "Build complete: $(BUILD_DIR)/"
+
+install: build ## Symlink build output into GNOME Shell extensions directory
+	@if [ -L "$(INSTALL_DIR)" ]; then \
+		echo "Symlink already exists: $(INSTALL_DIR)"; \
+	elif [ -e "$(INSTALL_DIR)" ]; then \
+		echo "Error: $(INSTALL_DIR) exists and is not a symlink"; exit 1; \
+	else \
+		ln -s "$(BUILD_DIR)" "$(INSTALL_DIR)"; \
+		echo "Installed: $(INSTALL_DIR) -> $(BUILD_DIR)"; \
+	fi
+
+uninstall: ## Remove symlink from GNOME Shell extensions directory
+	@if [ -L "$(INSTALL_DIR)" ]; then \
+		rm "$(INSTALL_DIR)"; \
+		echo "Removed symlink: $(INSTALL_DIR)"; \
+	elif [ -e "$(INSTALL_DIR)" ]; then \
+		echo "Error: $(INSTALL_DIR) is not a symlink, refusing to remove"; exit 1; \
+	else \
+		echo "Nothing to remove: $(INSTALL_DIR) does not exist"; \
+	fi
+
+enable: ## Enable the extension
+	gnome-extensions enable $(UUID)
+
+disable: ## Disable the extension
+	gnome-extensions disable $(UUID)
+
+restart: build ## Rebuild and re-enable the extension
+	gnome-extensions disable $(UUID) && gnome-extensions enable $(UUID)
+
+nested: ## Launch a nested GNOME Shell session
+	dbus-run-session gnome-shell --devkit --wayland
+
+lint: ## Run ESLint on source files
+	npx eslint src/
+
+test: ## Run unit tests
+	npx jasmine --config=tests/jasmine.json
+
+check: lint build test ## Run all checks (lint, build, tests)
+	@echo "All checks passed"
+
+clean: ## Remove build output
+	rm -rf $(BUILD_DIR)
