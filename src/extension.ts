@@ -8,8 +8,8 @@ import type { MonitorInfo } from "./tree/tree-builder.js";
 import { RootContainer } from "./tree/root-container.js";
 import { ContainerType } from "./tree/container.js";
 import { WindowTracker } from "./window-tracker.js";
-import { parseCommandString } from "./commands/parser.js";
-import { buildCommandEngine, findFocusedContainer, registerDefaultHandlers } from "./commands/index.js";
+import { buildCommandEngine, registerDefaultHandlers } from "./commands/index.js";
+import { buildCommandService } from "./commands/service.js";
 import type { WindowAdapter } from "./commands/adapter.js";
 import { IpcServer } from "./ipc/server.js";
 import { buildMonitorInfos } from "./monitors.js";
@@ -218,25 +218,16 @@ export default class TesseraExtension extends Extension {
 
       const engine = buildCommandEngine();
       registerDefaultHandlers(engine);
-
-      const executeCommand = (command: string) => {
-        if (!this.root) {
-          return [{ success: false, message: "Root container is not ready" }];
-        }
-
-        const commands = parseCommandString(command);
-        const focused = findFocusedContainer(this.root);
-        return engine.executeBatch(commands, {
-          root: this.root,
-          focused,
-          adapter,
-        });
-      };
+      const commandService = buildCommandService({
+        engine,
+        adapter,
+        getRoot: () => this.root,
+      });
 
       if (GLib.getenv("TESSERA_IPC") === "1") {
         this.ipcServer = new IpcServer();
         this.ipcServer.start({
-          execute: executeCommand,
+          execute: commandService.execute,
           tree: () => this.root?.toJSON(),
           ping: () => ({ ok: true }),
           version: () => ({
@@ -337,7 +328,7 @@ export default class TesseraExtension extends Extension {
         root: this.root as RootContainer,
         tracker: this.tracker as WindowTracker,
         tree: () => this.root?.toJSON(),
-        execute: executeCommand,
+        execute: commandService.execute,
       };
     } catch (error) {
       const errorText =
