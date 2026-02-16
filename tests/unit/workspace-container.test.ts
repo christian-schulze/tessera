@@ -1,5 +1,6 @@
 import { WorkspaceContainer } from "../../src/tree/workspace-container.ts";
 import { Container, ContainerType } from "../../src/tree/container.ts";
+import { WindowContainer } from "../../src/tree/window-container.ts";
 
 describe("WorkspaceContainer", () => {
   it("initializes workspace metadata", () => {
@@ -37,12 +38,14 @@ describe("WorkspaceContainer", () => {
     expect(workspace.tiledWindowCount()).toBe(3);
   });
 
-  xit("tracks floating windows", () => {
+  it("tracks and serializes floating windows", () => {
     const workspace = new WorkspaceContainer(1, "1", 1, true);
-    const floating = { windowId: 10 } as any;
+    const floating = new WindowContainer(2, {}, 10, "demo", "Floating");
+    floating.floating = true;
 
     workspace.addFloatingWindow(floating);
     expect(workspace.getFloatingWindows()).toEqual([floating]);
+    expect(workspace.toJSON().floatingWindows).toEqual([floating.toJSON()]);
 
     workspace.removeFloatingWindow(floating);
     expect(workspace.getFloatingWindows()).toEqual([]);

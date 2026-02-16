@@ -11,6 +11,7 @@ export enum Layout {
   SplitV = "splitv",
   Stacking = "stacking",
   Tabbed = "tabbed",
+  Alternating = "alternating",
 }
 
 export interface Rect {

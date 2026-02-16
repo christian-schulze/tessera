@@ -43,7 +43,7 @@ restart: build ## Rebuild and re-enable the extension
 	gnome-extensions disable $(UUID) && gnome-extensions enable $(UUID)
 
 nested: ## Launch a nested GNOME Shell session
-	dbus-run-session -- bash -lc 'echo "$$DBUS_SESSION_BUS_ADDRESS" > .nested-bus; gnome-shell --devkit --wayland'
+	dbus-run-session -- bash -lc 'echo "$$DBUS_SESSION_BUS_ADDRESS" > .nested-bus; TESSERA_IPC=$${TESSERA_IPC:-1} gnome-shell --devkit --wayland'
 
 looking-glass: ## Open Looking Glass in current GNOME Shell session
 	@if [ -f .nested-bus ]; then \

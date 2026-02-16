@@ -1,24 +1,53 @@
 import Meta from "gi://Meta";
 import Shell from "gi://Shell";
+import GLib from "gi://GLib";
 
 import { reflow } from "./tree/reflow.js";
-import { Container, ContainerType, Rect } from "./tree/container.js";
+import { Container, ContainerType, Layout } from "./tree/container.js";
 import { RootContainer } from "./tree/root-container.js";
 import { SplitContainer } from "./tree/split-container.js";
 import { WorkspaceContainer } from "./tree/workspace-container.js";
 import { WindowContainer } from "./tree/window-container.js";
+import { applyLayout } from "./tree/apply-layout.js";
+import type { WindowAdapter } from "./commands/adapter.js";
+import type { TesseraConfig } from "./config.js";
+import { updateFocusedWindow } from "./window-tracker-focus.js";
+import { getLayoutStrategy } from "./layout/strategy.js";
 
 export class WindowTracker {
   private root: RootContainer;
   private windowMap: Map<number, WindowContainer>;
   private windowSignals: Map<number, number[]>;
   private displaySignal: number | null;
+  private focusSignal: number | null;
+  private adapter: WindowAdapter;
+  private layoutRetries: Map<number, number>;
+  private getConfig: () => TesseraConfig;
 
-  constructor(root: RootContainer) {
+  constructor(root: RootContainer, getConfig: () => TesseraConfig) {
     this.root = root;
+    this.getConfig = getConfig;
     this.windowMap = new Map();
     this.windowSignals = new Map();
     this.displaySignal = null;
+    this.focusSignal = null;
+    this.layoutRetries = new Map();
+    this.adapter = {
+      activate: () => {},
+      moveResize: (window: unknown, rect) => {
+        (window as Meta.Window).move_resize_frame(
+          true,
+          rect.x,
+          rect.y,
+          rect.width,
+          rect.height
+        );
+      },
+      setFullscreen: () => {},
+      setFloating: () => {},
+      close: () => {},
+      exec: () => {},
+    };
   }
 
   start(): void {
@@ -33,16 +62,32 @@ export class WindowTracker {
       }
     );
 
+    this.focusSignal = global.display.connect(
+      "notify::focus-window",
+      () => {
+        const focused = global.display.get_focus_window() as Meta.Window | null;
+        updateFocusedWindow(this.root, this.windowMap, focused);
+      }
+    );
+
     for (const actor of global.get_window_actors()) {
       const window = actor.meta_window as Meta.Window;
       this.trackWindow(window);
     }
+
+    const focused = global.display.get_focus_window() as Meta.Window | null;
+    updateFocusedWindow(this.root, this.windowMap, focused);
   }
 
   stop(): void {
     if (this.displaySignal !== null) {
       global.display.disconnect(this.displaySignal);
       this.displaySignal = null;
+    }
+
+    if (this.focusSignal !== null) {
+      global.display.disconnect(this.focusSignal);
+      this.focusSignal = null;
     }
 
     for (const [windowId, container] of this.windowMap.entries()) {
@@ -54,6 +99,7 @@ export class WindowTracker {
 
     this.windowMap.clear();
     this.windowSignals.clear();
+    updateFocusedWindow(this.root, this.windowMap, null);
   }
 
   getActiveWorkspace(): WorkspaceContainer | null {
@@ -87,6 +133,10 @@ export class WindowTracker {
       return;
     }
 
+    if (window.is_maximized?.()) {
+      window.unmaximize();
+    }
+
     const appId = this.getAppId(window);
     const title = window.get_title() ?? "";
     const container = new WindowContainer(
@@ -98,13 +148,43 @@ export class WindowTracker {
     );
 
     const split = this.findSplitTarget(workspace);
+    const { minTileWidth, minTileHeight } = this.getConfig();
+    const tiledCount = split.children.filter(
+      (child) => child.type === ContainerType.Window &&
+        !(child as WindowContainer).floating
+    ).length;
+    const projectedCount = tiledCount + 1;
+    const shouldFloat = getLayoutStrategy(split.layout).shouldFloatOnAdd(
+      workspace.rect,
+      projectedCount,
+      minTileWidth,
+      minTileHeight
+    );
+
+    if (shouldFloat) {
+      container.floating = true;
+      workspace.addFloatingWindow(container);
+      this.adapter.setFloating(window, true);
+      const frameRect = window.get_frame_rect();
+      const width = Math.min(frameRect.width, workspace.rect.width);
+      const height = Math.min(frameRect.height, workspace.rect.height);
+      const x = workspace.rect.x + Math.floor((workspace.rect.width - width) / 2);
+      const y = workspace.rect.y + Math.floor((workspace.rect.height - height) / 2);
+      container.rect = { x, y, width, height };
+      this.adapter.moveResize(window, container.rect);
+    }
+
     split.addChild(container);
 
     this.windowMap.set(windowId, container);
     this.attachWindowSignals(windowId, window, container);
 
     reflow(split);
-    this.applyLayout(split);
+    applyLayout(split, this.adapter);
+
+    if (!container.floating) {
+      this.scheduleLayoutRetry(container);
+    }
   }
 
   private attachWindowSignals(
@@ -126,7 +206,119 @@ export class WindowTracker {
       })
     );
 
+    signalIds.push(
+      window.connect("notify::maximized-horizontally", () => {
+        if (window.is_maximized?.()) {
+          window.unmaximize();
+        }
+      })
+    );
+
+    signalIds.push(
+      window.connect("notify::maximized-vertically", () => {
+        if (window.is_maximized?.()) {
+          window.unmaximize();
+        }
+      })
+    );
+
     this.windowSignals.set(windowId, signalIds);
+  }
+
+  private scheduleLayoutRetry(container: WindowContainer): void {
+    const window = container.window as Meta.Window;
+    const windowId = this.getWindowId(window);
+    if (this.layoutRetries.has(windowId)) {
+      return;
+    }
+
+    this.layoutRetries.set(windowId, 0);
+    const maxAttempts = 10;
+    const intervalMs = 100;
+
+    GLib.timeout_add(GLib.PRIORITY_DEFAULT, intervalMs, () => {
+      if (!container.parent) {
+        this.layoutRetries.delete(windowId);
+        return GLib.SOURCE_REMOVE;
+      }
+
+      const attempts = (this.layoutRetries.get(windowId) ?? 0) + 1;
+      this.layoutRetries.set(windowId, attempts);
+
+      const desired = container.rect;
+      const actual = window.get_frame_rect();
+      const matches =
+        desired.x === actual.x &&
+        desired.y === actual.y &&
+        desired.width === actual.width &&
+        desired.height === actual.height;
+
+      if (!matches) {
+        const parent = container.parent;
+        if (parent) {
+          reflow(parent);
+          applyLayout(parent, this.adapter);
+        }
+      }
+
+      if (matches) {
+        this.layoutRetries.delete(windowId);
+        return GLib.SOURCE_REMOVE;
+      }
+
+      if (attempts >= maxAttempts) {
+        const workspace = this.findWorkspace(container);
+        const parent = container.parent;
+        if (workspace && parent) {
+          const { minTileWidth, minTileHeight } = this.getConfig();
+          const tiledCount = parent.children.filter(
+            (child) => child.type === ContainerType.Window &&
+              !(child as WindowContainer).floating
+          ).length;
+          const shouldFloat = getLayoutStrategy(parent.layout).shouldFloatOnRetry(
+            workspace.rect,
+            tiledCount,
+            minTileWidth,
+            minTileHeight,
+            actual
+          );
+
+          if (shouldFloat) {
+            container.floating = true;
+            workspace.addFloatingWindow(container);
+            this.adapter.setFloating(window, true);
+            const width = Math.min(actual.width, workspace.rect.width);
+            const height = Math.min(actual.height, workspace.rect.height);
+            const x =
+              workspace.rect.x + Math.floor((workspace.rect.width - width) / 2);
+            const y =
+              workspace.rect.y +
+              Math.floor((workspace.rect.height - height) / 2);
+            container.rect = { x, y, width, height };
+            this.adapter.moveResize(window, container.rect);
+            reflow(parent);
+            applyLayout(parent, this.adapter);
+          }
+        }
+
+        this.layoutRetries.delete(windowId);
+        return GLib.SOURCE_REMOVE;
+      }
+
+      return GLib.SOURCE_CONTINUE;
+    });
+  }
+
+  private findWorkspace(container: Container): WorkspaceContainer | null {
+    let current: Container | null = container.parent;
+    while (current) {
+      if (current.type === ContainerType.Workspace) {
+        return current as WorkspaceContainer;
+      }
+      current = current.parent;
+    }
+
+    return null;
   }
 
   private detachWindowSignals(windowId: number): void {
@@ -156,11 +348,15 @@ export class WindowTracker {
 
     this.detachWindowSignals(windowId);
     this.windowMap.delete(windowId);
+    this.layoutRetries.delete(windowId);
 
     if (parent) {
       reflow(parent);
-      this.applyLayout(parent);
+      applyLayout(parent, this.adapter);
     }
+
+    const focused = global.display.get_focus_window() as Meta.Window | null;
+    updateFocusedWindow(this.root, this.windowMap, focused);
   }
 
   private findSplitTarget(workspace: WorkspaceContainer): SplitContainer {
@@ -176,21 +372,6 @@ export class WindowTracker {
     split.rect = { ...workspace.rect };
     workspace.addChild(split);
     return split;
-  }
-
-  private applyLayout(container: Container): void {
-    for (const child of container.children) {
-      if (child.type === ContainerType.Window) {
-        const windowContainer = child as WindowContainer;
-        this.applyGeometry(windowContainer.window as Meta.Window, child.rect);
-      } else if (child.children.length > 0) {
-        this.applyLayout(child);
-      }
-    }
-  }
-
-  private applyGeometry(window: Meta.Window, rect: Rect): void {
-    window.move_resize_frame(true, rect.x, rect.y, rect.width, rect.height);
   }
 
   private getWindowId(window: Meta.Window): number {
