@@ -36,4 +36,22 @@ describe("ipc codec", () => {
       params: { minTileWidth: 360, minTileHeight: 280 },
     });
   });
+
+  it("round-trips minTileHeight through config codec", () => {
+    const request = decodeRequest(
+      '{"id":"4","method":"config","params":{"minTileWidth":320,"minTileHeight":240}}'
+    );
+
+    const encoded = encodeResponse({
+      id: request.id,
+      ok: true,
+      result: request.params,
+    });
+
+    expect(JSON.parse(encoded)).toEqual({
+      id: "4",
+      ok: true,
+      result: { minTileWidth: 320, minTileHeight: 240 },
+    });
+  });
 });
