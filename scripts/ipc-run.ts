@@ -31,7 +31,7 @@ const readSockets = async () => {
 
 const usage = () => {
   console.error("Usage: bunx tsx scripts/ipc-run.ts <method> [command]");
-  console.error("Methods: tree, ping, version, execute");
+  console.error("Methods: tree, ping, version, execute, debug");
 };
 
 const method = process.argv[2];

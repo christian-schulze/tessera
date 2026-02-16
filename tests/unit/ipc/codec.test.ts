@@ -16,4 +16,13 @@ describe("ipc codec", () => {
     const json = encodeResponse({ id: "1", ok: true, result: { ok: true } });
     expect(json).toBe('{"id":"1","ok":true,"result":{"ok":true}}');
   });
+
+  it("decodes a debug request", () => {
+    const request = decodeRequest('{"id":"2","method":"debug"}');
+    expect(request).toEqual({
+      id: "2",
+      method: "debug",
+      params: undefined,
+    });
+  });
 });

@@ -1,6 +1,12 @@
 import type { ExecuteParams, IpcMethod, IpcRequest, IpcResponse } from "./types.js";
 
-const methods = new Set<IpcMethod>(["execute", "tree", "ping", "version"]);
+const methods = new Set<IpcMethod>([
+  "execute",
+  "tree",
+  "ping",
+  "version",
+  "debug",
+]);
 
 export const decodeRequest = (payload: string): IpcRequest => {
   const parsed = JSON.parse(payload) as {

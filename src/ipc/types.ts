@@ -1,4 +1,4 @@
-export type IpcMethod = "execute" | "tree" | "ping" | "version";
+export type IpcMethod = "execute" | "tree" | "ping" | "version" | "debug";
 
 export type ExecuteParams = {
   command: string;

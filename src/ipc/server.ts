@@ -9,6 +9,7 @@ type IpcHandlers = {
   tree: () => unknown;
   ping: () => unknown;
   version: () => unknown;
+  debug: () => unknown;
 };
 
 const readAll = (stream: Gio.InputStream): string => {
@@ -54,6 +55,10 @@ export class IpcServer {
   private service: Gio.SocketService | null = null;
   private socketPath: string | null = null;
   private handlers: IpcHandlers | null = null;
+
+  getSocketPath(): string | null {
+    return this.socketPath;
+  }
 
   start(handlers: IpcHandlers): void {
     if (this.service) {
@@ -180,6 +185,12 @@ export class IpcServer {
             id: request.id,
             ok: true,
             result: this.handlers.version(),
+          };
+        case "debug":
+          return {
+            id: request.id,
+            ok: true,
+            result: this.handlers.debug(),
           };
         default:
           return {
