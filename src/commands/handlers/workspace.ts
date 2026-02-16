@@ -3,6 +3,8 @@ import type { CommandContext } from "../context.js";
 import { Container, ContainerType } from "../../tree/container.js";
 import { WindowContainer } from "../../tree/window-container.js";
 import { WorkspaceContainer } from "../../tree/workspace-container.js";
+import { reflow } from "../../tree/reflow.js";
+import { applyLayout } from "../../tree/apply-layout.js";
 
 const result = (success: boolean, message?: string): CommandResult => ({
   success,
@@ -131,9 +133,9 @@ export const floatingHandler: CommandHandler = {
     let floating = focused.floating;
     if (mode === "toggle") {
       floating = !focused.floating;
-    } else if (mode === "enable") {
+    } else if (mode === "enable" || mode === "on") {
       floating = true;
-    } else if (mode === "disable") {
+    } else if (mode === "disable" || mode === "off") {
       floating = false;
     }
 
@@ -146,6 +148,8 @@ export const floatingHandler: CommandHandler = {
         if (floating) {
           workspace.addFloatingWindow(focused);
         }
+        reflow(workspace);
+        applyLayout(workspace, context.adapter);
       }
 
     return result(true);

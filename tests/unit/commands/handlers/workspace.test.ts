@@ -23,7 +23,7 @@ describe("Workspace and window state handlers", () => {
     floating: [] as Array<{ window: unknown; value: boolean }>,
     fullscreen: [] as Array<{ window: unknown; value: boolean }>,
     activate: () => {},
-    moveResize: () => {},
+    moveResize: jasmine.createSpy("moveResize"),
     setFullscreen(window: unknown, value: boolean) {
       this.fullscreen.push({ window, value });
     },
@@ -99,6 +99,30 @@ describe("Workspace and window state handlers", () => {
     expect(focused.floating).toBeTrue();
     expect(workspace.getFloatingWindows()).toEqual([focused]);
     expect(adapter.floating).toEqual([{ window, value: true }]);
+    expect(adapter.moveResize).not.toHaveBeenCalled();
+  });
+
+  it("tiles when floating is turned off", () => {
+    const window = {};
+    const focused = new WindowContainer("win", window, 1, "app", "title");
+    const workspace = new WorkspaceContainer(2, "dev", 1, true);
+    focused.floating = true;
+    workspace.addChild(focused);
+    workspace.addFloatingWindow(focused);
+
+    const adapter = makeAdapter();
+
+    const result = floatingHandler.execute(makeCommand("floating", ["off"]), {
+      root: workspace as any,
+      focused,
+      adapter,
+    });
+
+    expect(result.success).toBeTrue();
+    expect(focused.floating).toBeFalse();
+    expect(workspace.getFloatingWindows()).toEqual([]);
+    expect(adapter.floating).toEqual([{ window, value: false }]);
+    expect(adapter.moveResize).toHaveBeenCalled();
   });
 
   it("toggles fullscreen on focused windows", () => {
