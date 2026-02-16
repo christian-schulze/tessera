@@ -1,4 +1,4 @@
-import type { Container } from "../tree/container.js";
+import type { Container, Rect } from "../tree/container.js";
 import { ContainerType, Layout } from "../tree/container.js";
 import type { WindowContainer } from "../tree/window-container.js";
 
@@ -14,6 +14,19 @@ export interface OverflowContext {
 export interface LayoutStrategy {
   id: Layout;
   computeRects: (container: Container) => void;
+  shouldFloatOnAdd: (
+    workspaceRect: Rect,
+    projectedCount: number,
+    minTileWidth: number,
+    minTileHeight: number
+  ) => boolean;
+  shouldFloatOnRetry: (
+    workspaceRect: Rect,
+    tiledCount: number,
+    minTileWidth: number,
+    minTileHeight: number,
+    actualRect: Rect
+  ) => boolean;
 }
 
 export const overflowContext: OverflowContext = {};
@@ -92,6 +105,19 @@ const splitHStrategy: LayoutStrategy = {
   computeRects: (container) => {
     computeSplitRects(container, true);
   },
+  shouldFloatOnAdd: (workspaceRect, projectedCount, minTileWidth) => {
+    return workspaceRect.width / projectedCount < minTileWidth;
+  },
+  shouldFloatOnRetry: (
+    workspaceRect,
+    tiledCount,
+    minTileWidth,
+    _minTileHeight,
+    actualRect
+  ) => {
+    const minWidth = Math.max(minTileWidth, actualRect.width);
+    return workspaceRect.width / tiledCount < minWidth;
+  },
 };
 
 const splitVStrategy: LayoutStrategy = {
@@ -99,12 +125,48 @@ const splitVStrategy: LayoutStrategy = {
   computeRects: (container) => {
     computeSplitRects(container, false);
   },
+  shouldFloatOnAdd: (
+    workspaceRect,
+    projectedCount,
+    _minTileWidth,
+    minTileHeight
+  ) => {
+    return workspaceRect.height / projectedCount < minTileHeight;
+  },
+  shouldFloatOnRetry: (
+    workspaceRect,
+    tiledCount,
+    _minTileWidth,
+    minTileHeight,
+    actualRect
+  ) => {
+    const minHeight = Math.max(minTileHeight, actualRect.height);
+    return workspaceRect.height / tiledCount < minHeight;
+  },
 };
 
 const fallbackStrategy: LayoutStrategy = {
   id: Layout.SplitV,
   computeRects: (container) => {
     computeSplitRects(container, false);
+  },
+  shouldFloatOnAdd: (
+    workspaceRect,
+    projectedCount,
+    _minTileWidth,
+    minTileHeight
+  ) => {
+    return workspaceRect.height / projectedCount < minTileHeight;
+  },
+  shouldFloatOnRetry: (
+    workspaceRect,
+    tiledCount,
+    _minTileWidth,
+    minTileHeight,
+    actualRect
+  ) => {
+    const minHeight = Math.max(minTileHeight, actualRect.height);
+    return workspaceRect.height / tiledCount < minHeight;
   },
 };
 

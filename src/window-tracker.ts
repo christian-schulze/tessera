@@ -12,10 +12,7 @@ import { applyLayout } from "./tree/apply-layout.js";
 import type { WindowAdapter } from "./commands/adapter.js";
 import type { TesseraConfig } from "./config.js";
 import { updateFocusedWindow } from "./window-tracker-focus.js";
-import {
-  shouldFloatOnAdd,
-  shouldFloatOnRetry,
-} from "./window-tracker-overflow.js";
+import { getLayoutStrategy } from "./layout/strategy.js";
 
 export class WindowTracker {
   private root: RootContainer;
@@ -157,8 +154,7 @@ export class WindowTracker {
         !(child as WindowContainer).floating
     ).length;
     const projectedCount = tiledCount + 1;
-    const shouldFloat = shouldFloatOnAdd(
-      split.layout,
+    const shouldFloat = getLayoutStrategy(split.layout).shouldFloatOnAdd(
       workspace.rect,
       projectedCount,
       minTileWidth,
@@ -279,8 +275,7 @@ export class WindowTracker {
             (child) => child.type === ContainerType.Window &&
               !(child as WindowContainer).floating
           ).length;
-          const shouldFloat = shouldFloatOnRetry(
-            parent.layout,
+          const shouldFloat = getLayoutStrategy(parent.layout).shouldFloatOnRetry(
             workspace.rect,
             tiledCount,
             minTileWidth,
