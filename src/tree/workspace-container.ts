@@ -1,12 +1,13 @@
 import type { ContainerJSON } from "./container.js";
 import { Container, ContainerType } from "./container.js";
+import type { WindowContainer } from "./window-container.js";
 
 export interface WorkspaceJSON extends ContainerJSON {
   name: string;
   number: number;
   visible: boolean;
   urgent: boolean;
-  floatingWindows: unknown[];
+  floatingWindows: ContainerJSON[];
 }
 
 export class WorkspaceContainer extends Container {
@@ -14,7 +15,7 @@ export class WorkspaceContainer extends Container {
   number: number;
   visible: boolean;
   urgent: boolean;
-  private floatingWindows: unknown[];
+  private floatingWindows: WindowContainer[];
 
   constructor(id: number, name: string, number: number, visible: boolean) {
     super(id, ContainerType.Workspace);
@@ -25,11 +26,11 @@ export class WorkspaceContainer extends Container {
     this.floatingWindows = [];
   }
 
-  addFloatingWindow(window: unknown): void {
+  addFloatingWindow(window: WindowContainer): void {
     this.floatingWindows.push(window);
   }
 
-  removeFloatingWindow(window: unknown): void {
+  removeFloatingWindow(window: WindowContainer): void {
     const index = this.floatingWindows.indexOf(window);
     if (index === -1) {
       return;
@@ -38,7 +39,7 @@ export class WorkspaceContainer extends Container {
     this.floatingWindows.splice(index, 1);
   }
 
-  getFloatingWindows(): unknown[] {
+  getFloatingWindows(): WindowContainer[] {
     return [...this.floatingWindows];
   }
 
@@ -67,7 +68,7 @@ export class WorkspaceContainer extends Container {
       number: this.number,
       visible: this.visible,
       urgent: this.urgent,
-      floatingWindows: this.getFloatingWindows(),
+      floatingWindows: this.getFloatingWindows().map((window) => window.toJSON()),
     };
   }
 }

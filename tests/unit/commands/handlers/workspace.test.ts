@@ -97,7 +97,7 @@ describe("Workspace and window state handlers", () => {
 
     expect(result.success).toBeTrue();
     expect(focused.floating).toBeTrue();
-    expect(workspace.getFloatingWindows()).toEqual([window]);
+    expect(workspace.getFloatingWindows()).toEqual([focused]);
     expect(adapter.floating).toEqual([{ window, value: true }]);
   });
 

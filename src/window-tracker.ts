@@ -167,7 +167,7 @@ export class WindowTracker {
 
     if (shouldFloat) {
       container.floating = true;
-      workspace.addFloatingWindow(window);
+      workspace.addFloatingWindow(container);
       this.adapter.setFloating(window, true);
       const frameRect = window.get_frame_rect();
       const width = Math.min(frameRect.width, workspace.rect.width);
@@ -290,7 +290,7 @@ export class WindowTracker {
 
           if (shouldFloat) {
             container.floating = true;
-            workspace.addFloatingWindow(window);
+            workspace.addFloatingWindow(container);
             this.adapter.setFloating(window, true);
             const width = Math.min(actual.width, workspace.rect.width);
             const height = Math.min(actual.height, workspace.rect.height);

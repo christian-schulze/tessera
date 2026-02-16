@@ -62,7 +62,7 @@ export const loadConfig = (): TesseraConfig => {
     if (!glib) {
       throw new Error("GLib is unavailable");
     }
-    return glib as typeof import("gi://GLib");
+    return glib as typeof import("gi://GLib").default;
   })();
   const config: TesseraConfig = { ...DEFAULT_CONFIG };
   const home = GLib.get_home_dir();

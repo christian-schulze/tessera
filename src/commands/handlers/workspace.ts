@@ -141,12 +141,12 @@ export const floatingHandler: CommandHandler = {
     context.adapter.setFloating(focused.window, floating);
 
     const workspace = findWorkspaceForContainer(focused);
-    if (workspace) {
-      workspace.removeFloatingWindow(focused.window);
-      if (floating) {
-        workspace.addFloatingWindow(focused.window);
+      if (workspace) {
+        workspace.removeFloatingWindow(focused);
+        if (floating) {
+          workspace.addFloatingWindow(focused);
+        }
       }
-    }
 
     return result(true);
   },
