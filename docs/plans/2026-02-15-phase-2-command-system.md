@@ -712,6 +712,8 @@ git commit -m "docs: record phase 2 manual verification"
 
 - `minTileWidth` (default 300): minimum tile width before new tiling windows float.
 - `minTileHeight` (default 240): minimum tile height before new vertical tiling windows float.
+- Overflow behavior is now defined per-layout via the strategy registry.
+- Alternating layout is a placeholder (no custom strategy yet).
 
 ## Future Notes
 
