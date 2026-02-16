@@ -701,11 +701,14 @@ git commit -m "docs: record phase 2 manual verification"
 
 ## Manual Verification (Required)
 
-- Status: NOT RUN
-- Date: 
-- Notes: 
+- Status: PARTIAL (IPC verified, Looking Glass return issue)
+- Date: 2026-02-16
+- Notes:
+  - `make nested`: Looking Glass `globalThis.__tessera.execute("splitv")` returned `undefined`, but manually opening a new console window tiled vertically as expected.
+  - `TESSERA_IPC=1 make nested`: IPC execute worked as expected for manual commands.
 
 ## Future Notes
 
 - Consider adding a user-defined hook (configurable/scriptable) to decide what happens when tiling space runs out (e.g., float the new window, switch layout, or prompt).
 - Consider making the layout retry window configurable via config/IPC (e.g., max attempts or total retry duration).
+- Fix Looking Glass return value for non-IPC `globalThis.__tessera.execute` in nested sessions (currently returns `undefined`).
