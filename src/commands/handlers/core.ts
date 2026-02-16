@@ -186,6 +186,7 @@ export const layoutHandler: CommandHandler = {
       splith: Layout.SplitH,
       stacking: Layout.Stacking,
       tabbed: Layout.Tabbed,
+      alternating: Layout.Alternating,
     };
 
     const layout = layoutMap[target];

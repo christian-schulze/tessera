@@ -244,4 +244,24 @@ describe("Core command handlers", () => {
     expect(parent.layout).toBe(Layout.Stacking);
     expect(adapter.moveResize).toHaveBeenCalled();
   });
+
+  it("layout supports alternating", () => {
+    const window = new WindowContainer("win", {}, 1, "app", "title");
+    const parent = new SplitContainer("parent", Layout.SplitH);
+    parent.addChild(window);
+
+    const adapter = makeAdapter();
+    const config = { minTileWidth: 300, minTileHeight: 240 };
+
+    const result = layoutHandler.execute(makeCommand("layout", ["alternating"]), {
+      root: parent as any,
+      focused: window,
+      adapter,
+      config,
+    });
+
+    expect(result.success).toBeTrue();
+    expect(parent.layout).toBe(Layout.Alternating);
+    expect(adapter.moveResize).toHaveBeenCalled();
+  });
 });
