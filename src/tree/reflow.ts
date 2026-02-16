@@ -1,4 +1,5 @@
-import { Container, Layout } from "./container.js";
+import { Container, ContainerType, Layout } from "./container.js";
+import type { WindowContainer } from "./window-container.js";
 
 export interface GapConfig {
   inner?: number;
@@ -8,6 +9,17 @@ export interface GapConfig {
 export function reflow(container: Container, gaps?: GapConfig): void {
   const { children } = container;
   if (children.length === 0) {
+    return;
+  }
+
+  const layoutChildren = children.filter((child) => {
+    if (child.type !== ContainerType.Window) {
+      return true;
+    }
+    return !(child as WindowContainer).floating;
+  });
+
+  if (layoutChildren.length === 0) {
     return;
   }
 
@@ -21,7 +33,7 @@ export function reflow(container: Container, gaps?: GapConfig): void {
     height: Math.max(0, container.rect.height - outer * 2),
   };
 
-  const totalProportion = children.reduce(
+  const totalProportion = layoutChildren.reduce(
     (sum, child) => sum + child.proportion,
     0
   );
@@ -29,14 +41,14 @@ export function reflow(container: Container, gaps?: GapConfig): void {
 
   const isHorizontal = container.layout === Layout.SplitH;
   const mainSize = isHorizontal ? baseRect.width : baseRect.height;
-  const totalGap = inner * (children.length - 1);
+  const totalGap = inner * (layoutChildren.length - 1);
   const available = Math.max(0, mainSize - totalGap);
 
   let used = 0;
   let offset = isHorizontal ? baseRect.x : baseRect.y;
 
-  children.forEach((child, index) => {
-    const isLast = index === children.length - 1;
+  layoutChildren.forEach((child, index) => {
+    const isLast = index === layoutChildren.length - 1;
     let size = 0;
 
     if (isLast) {

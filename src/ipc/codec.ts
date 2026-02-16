@@ -1,4 +1,10 @@
-import type { ExecuteParams, IpcMethod, IpcRequest, IpcResponse } from "./types.js";
+import type {
+  ConfigParams,
+  ExecuteParams,
+  IpcMethod,
+  IpcRequest,
+  IpcResponse,
+} from "./types.js";
 
 const methods = new Set<IpcMethod>([
   "execute",
@@ -6,6 +12,7 @@ const methods = new Set<IpcMethod>([
   "ping",
   "version",
   "debug",
+  "config",
 ]);
 
 export const decodeRequest = (payload: string): IpcRequest => {
@@ -32,7 +39,7 @@ export const decodeRequest = (payload: string): IpcRequest => {
   return {
     id,
     method: method as IpcMethod,
-    params: params as ExecuteParams | undefined,
+    params: params as ExecuteParams | ConfigParams | undefined,
   };
 };
 

@@ -11,6 +11,9 @@ export const applyLayout = (container: Container, adapter: WindowAdapter): void 
   for (const child of container.children) {
     if (child.type === ContainerType.Window) {
       const windowContainer = child as WindowContainer;
+      if (windowContainer.floating) {
+        continue;
+      }
       applyGeometry(adapter, windowContainer.window, child.rect);
     } else if (child.children.length > 0) {
       applyLayout(child, adapter);

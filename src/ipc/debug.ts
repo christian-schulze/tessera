@@ -37,11 +37,25 @@ type DebugExtension = {
   pollingActive: boolean;
 };
 
+type DebugWindowInfo = {
+  id: number;
+  title: string;
+  wmClass: string | null;
+  type: number;
+  maximized: boolean;
+  frameRect: Rect;
+  minWidth: number;
+  minHeight: number;
+  canMove: boolean;
+  canResize: boolean;
+};
+
 type DebugInput = {
   root: RootContainer | null;
   monitors: DebugMonitors;
   ipc: DebugIpc;
   extension: DebugExtension;
+  windows: DebugWindowInfo[];
   version: DebugVersion;
 };
 
@@ -61,6 +75,7 @@ type DebugPayload = {
   tracker: {
     trackedWindows: number;
   };
+  windows: DebugWindowInfo[];
   version: DebugVersion;
 };
 
@@ -120,6 +135,7 @@ export const buildDebugPayload = ({
   monitors,
   ipc,
   extension,
+  windows,
   version,
 }: DebugInput): DebugPayload => {
   if (!root) {
@@ -139,6 +155,7 @@ export const buildDebugPayload = ({
       tracker: {
         trackedWindows: 0,
       },
+      windows,
       version,
     };
   }
@@ -162,6 +179,7 @@ export const buildDebugPayload = ({
     tracker: {
       trackedWindows: countContainers(root, ContainerType.Window),
     },
+    windows,
     version,
   };
 };

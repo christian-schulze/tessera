@@ -2,7 +2,7 @@ import Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import { decodeRequest, encodeResponse } from "./codec.js";
 import { buildSocketPath } from "./paths.js";
-import type { IpcRequest, IpcResponse } from "./types.js";
+import type { ConfigParams, IpcRequest, IpcResponse } from "./types.js";
 
 type IpcHandlers = {
   execute: (command: string) => unknown;
@@ -10,6 +10,7 @@ type IpcHandlers = {
   ping: () => unknown;
   version: () => unknown;
   debug: () => unknown;
+  config: (params?: ConfigParams) => unknown;
 };
 
 const readAll = (stream: Gio.InputStream): string => {
@@ -191,6 +192,12 @@ export class IpcServer {
             id: request.id,
             ok: true,
             result: this.handlers.debug(),
+          };
+        case "config":
+          return {
+            id: request.id,
+            ok: true,
+            result: this.handlers.config(request.params as ConfigParams | undefined),
           };
         default:
           return {

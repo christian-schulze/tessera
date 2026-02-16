@@ -4,7 +4,9 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Meta from "gi://Meta";
 import GLib from "gi://GLib";
 import { TreeBuilder } from "./tree/tree-builder.js";
+import type { MonitorInfo } from "./tree/tree-builder.js";
 import { RootContainer } from "./tree/root-container.js";
+import { ContainerType } from "./tree/container.js";
 import { WindowTracker } from "./window-tracker.js";
 import { parseCommandString } from "./commands/parser.js";
 import { buildCommandEngine, findFocusedContainer, registerDefaultHandlers } from "./commands/index.js";
@@ -12,6 +14,7 @@ import type { WindowAdapter } from "./commands/adapter.js";
 import { IpcServer } from "./ipc/server.js";
 import { buildMonitorInfos } from "./monitors.js";
 import { buildDebugPayload } from "./ipc/debug.js";
+import { applyConfig, loadConfig, type TesseraConfig } from "./config.js";
 import {
   maybeRebuildTree,
   shouldContinuePolling,
@@ -49,6 +52,7 @@ export default class TesseraExtension extends Extension {
   private lastPollMonitors = 0;
   private lastPollOutputs = 0;
   private pollingActive = false;
+  private config: TesseraConfig = { minTileWidth: 300 };
 
   private logToFile(message: string): void {
     const path = "/tmp/tessera-enable.log";
@@ -61,14 +65,15 @@ export default class TesseraExtension extends Extension {
     }
   }
 
-  private rebuildTree(reason: string): void {
+  private rebuildTree(reason: string, monitorsOverride?: MonitorInfo[]): void {
     const builder = new TreeBuilder();
-    const monitors = buildMonitorInfos(Main.layoutManager, global.display);
+    const monitors = monitorsOverride ??
+      buildMonitorInfos(Main.layoutManager, global.display);
     this.lastRebuildReason = reason;
     this.lastRebuildMonitors = monitors.length;
 
     const root = builder.build(monitors);
-    const tracker = new WindowTracker(root);
+    const tracker = new WindowTracker(root, () => this.config);
     tracker.start();
 
     if (this.tracker) {
@@ -99,6 +104,43 @@ export default class TesseraExtension extends Extension {
       this.pollAttempts += 1;
       const monitors = buildMonitorInfos(Main.layoutManager, global.display);
       const outputs = this.root?.children.length ?? 0;
+      const hasWorkAreaMismatch = (() => {
+        if (!this.root || monitors.length === 0) {
+          return false;
+        }
+
+        for (const monitor of monitors) {
+          const output = this.root.getOutput(monitor.index);
+          if (!output) {
+            return true;
+          }
+
+          const workArea = monitor.workArea;
+          const outputArea = output.workArea;
+          if (
+            outputArea.x !== workArea.x ||
+            outputArea.y !== workArea.y ||
+            outputArea.width !== workArea.width ||
+            outputArea.height !== workArea.height
+          ) {
+            return true;
+          }
+
+          const workspace = output.children.find(
+            (child) => child.type === ContainerType.Workspace
+          );
+          if (workspace && (
+            workspace.rect.x !== workArea.x ||
+            workspace.rect.y !== workArea.y ||
+            workspace.rect.width !== workArea.width ||
+            workspace.rect.height !== workArea.height
+          )) {
+            return true;
+          }
+        }
+
+        return false;
+      })();
 
       this.lastPollMonitors = monitors.length;
       this.lastPollOutputs = outputs;
@@ -108,13 +150,21 @@ export default class TesseraExtension extends Extension {
         `attempt=${this.pollAttempts} monitors=${monitors.length} outputs=${outputs}`
       );
 
-      if (maybeRebuildTree(outputs, monitors.length, () => this.rebuildTree("poll"))) {
+      if (maybeRebuildTree(outputs, monitors.length, () => this.rebuildTree("poll", monitors))) {
         appendLog("/tmp/tessera-monitor.log", "rebuildTree() called");
         this.lastPollOutputs = this.root?.children.length ?? 0;
       }
 
+      if (hasWorkAreaMismatch) {
+        appendLog("/tmp/tessera-monitor.log", "work area mismatch -> rebuildTree()");
+        this.rebuildTree("workarea", monitors);
+      }
+
       const hasOutputs = (this.root?.children.length ?? 0) > 0;
-      if (!shouldContinuePolling(this.pollAttempts, maxAttempts, hasOutputs ? 1 : 0)) {
+      const shouldContinue =
+        hasWorkAreaMismatch ||
+        shouldContinuePolling(this.pollAttempts, maxAttempts, hasOutputs ? 1 : 0);
+      if (!shouldContinue) {
         this.monitorTimeout = null;
         this.pollingActive = false;
         return GLib.SOURCE_REMOVE;
@@ -127,6 +177,7 @@ export default class TesseraExtension extends Extension {
   enable(): void {
     try {
       this.logToFile("enable start");
+      this.config = loadConfig();
       this.rebuildTree("initial");
       GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
         this.rebuildTree("idle");
@@ -206,6 +257,39 @@ export default class TesseraExtension extends Extension {
               get_pid?: () => number;
             };
             const pid = glib.getpid?.() ?? glib.get_pid?.() ?? 0;
+            const windowActors = global.get_window_actors?.() ?? [];
+            const windows = windowActors
+              .map((actor) => {
+                const metaWindow = (actor as { meta_window?: Meta.Window })
+                  .meta_window;
+                if (!metaWindow) {
+                  return null;
+                }
+                const frameRect = metaWindow.get_frame_rect();
+                const minSize = (metaWindow as unknown as {
+                  get_min_size?: () => [number, number];
+                }).get_min_size?.();
+                const minWidth = minSize?.[0] ?? 0;
+                const minHeight = minSize?.[1] ?? 0;
+                return {
+                  id: metaWindow.get_id(),
+                  title: metaWindow.get_title(),
+                  wmClass: metaWindow.get_wm_class?.() ?? null,
+                  type: metaWindow.get_window_type(),
+                  maximized: metaWindow.is_maximized?.() ?? false,
+                  frameRect: {
+                    x: frameRect.x,
+                    y: frameRect.y,
+                    width: frameRect.width,
+                    height: frameRect.height,
+                  },
+                  minWidth,
+                  minHeight,
+                  canMove: metaWindow.allows_move(),
+                  canResize: metaWindow.allows_resize(),
+                };
+              })
+              .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 
             return buildDebugPayload({
               root: this.root,
@@ -228,6 +312,7 @@ export default class TesseraExtension extends Extension {
                 lastPollOutputs: this.lastPollOutputs,
                 pollingActive: this.pollingActive,
               },
+              windows,
               version: {
                 uuid: this.uuid,
                 version: (() => {
@@ -238,6 +323,12 @@ export default class TesseraExtension extends Extension {
                 })(),
               },
             });
+          },
+          config: (params) => {
+            if (params) {
+              applyConfig(this.config, params);
+            }
+            return { ...this.config };
           },
         });
       }

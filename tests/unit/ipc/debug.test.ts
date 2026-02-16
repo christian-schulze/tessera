@@ -38,6 +38,20 @@ describe("ipc debug payload", () => {
         lastPollOutputs: 1,
         pollingActive: false,
       },
+      windows: [
+        {
+          id: 101,
+          title: "One",
+          wmClass: "app.one",
+          type: 0,
+          maximized: false,
+          frameRect: { x: 0, y: 0, width: 100, height: 50 },
+          minWidth: 20,
+          minHeight: 10,
+          canMove: true,
+          canResize: true,
+        },
+      ],
       version: { uuid: "tessera@tessera.dev", version: "0.1.0" },
     });
 
@@ -63,6 +77,20 @@ describe("ipc debug payload", () => {
     expect(result.extension.pollingActive).toBe(false);
     expect(result.version.uuid).toBe("tessera@tessera.dev");
     expect(result.version.version).toBe("0.1.0");
+    expect(result.windows).toEqual([
+      {
+        id: 101,
+        title: "One",
+        wmClass: "app.one",
+        type: 0,
+        maximized: false,
+        frameRect: { x: 0, y: 0, width: 100, height: 50 },
+        minWidth: 20,
+        minHeight: 10,
+        canMove: true,
+        canResize: true,
+      },
+    ]);
     expect(result.tree.containerTypes).toEqual([
       ContainerType.Output,
       ContainerType.Workspace,
@@ -90,6 +118,7 @@ describe("ipc debug payload", () => {
         lastPollOutputs: 0,
         pollingActive: false,
       },
+      windows: [],
       version: { uuid: "tessera@tessera.dev", version: null },
     });
 
@@ -106,5 +135,6 @@ describe("ipc debug payload", () => {
     expect(result.extension.lastPollMonitors).toBe(0);
     expect(result.extension.lastPollOutputs).toBe(0);
     expect(result.extension.pollingActive).toBe(false);
+    expect(result.windows).toEqual([]);
   });
 });

@@ -50,6 +50,23 @@ Then use the IPC CLI:
 ```bash
 bunx tsx scripts/ipc-run.ts tree
 bunx tsx scripts/ipc-run.ts execute "splitv; focus right"
+bunx tsx scripts/ipc-run.ts config 300
+```
+
+## Configuration
+
+Create `~/.config/tessera/config.js` to override defaults:
+
+```js
+module.exports = {
+  minTileWidth: 300,
+};
+```
+
+You can also update it at runtime:
+
+```bash
+bunx tsx scripts/ipc-run.ts config 360
 ```
 
 ## Review Notes

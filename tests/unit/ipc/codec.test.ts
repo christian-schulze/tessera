@@ -25,4 +25,15 @@ describe("ipc codec", () => {
       params: undefined,
     });
   });
+
+  it("decodes a config request", () => {
+    const request = decodeRequest(
+      '{"id":"3","method":"config","params":{"minTileWidth":360}}'
+    );
+    expect(request).toEqual({
+      id: "3",
+      method: "config",
+      params: { minTileWidth: 360 },
+    });
+  });
 });

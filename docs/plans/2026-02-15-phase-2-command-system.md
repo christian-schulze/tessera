@@ -704,3 +704,8 @@ git commit -m "docs: record phase 2 manual verification"
 - Status: NOT RUN
 - Date: 
 - Notes: 
+
+## Future Notes
+
+- Consider adding a user-defined hook (configurable/scriptable) to decide what happens when tiling space runs out (e.g., float the new window, switch layout, or prompt).
+- Consider making the layout retry window configurable via config/IPC (e.g., max attempts or total retry duration).
