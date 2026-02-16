@@ -21,6 +21,7 @@ describe("command service", () => {
       engine,
       adapter,
       getRoot: () => null,
+      getConfig: () => ({ minTileWidth: 300, minTileHeight: 240 }),
       getFocused: () => null,
     });
 
@@ -44,7 +45,7 @@ describe("command service", () => {
     const engine = {
       executeBatch: (
         _commands: unknown,
-        context: { root: unknown; focused: unknown; adapter: WindowAdapter }
+        context: { root: unknown; focused: unknown; adapter: WindowAdapter; config: unknown }
       ) => {
         captured = { root: context.root, focused: context.focused, adapter: context.adapter };
         return [{ success: true }];
@@ -55,6 +56,7 @@ describe("command service", () => {
       engine,
       adapter,
       getRoot: () => root as never,
+      getConfig: () => ({ minTileWidth: 300, minTileHeight: 240 }),
       getFocused: () => null,
     });
 

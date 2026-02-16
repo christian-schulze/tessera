@@ -223,6 +223,7 @@ export default class TesseraExtension extends Extension {
         engine,
         adapter,
         getRoot: () => this.root,
+        getConfig: () => this.config,
       });
 
       const buildDebug = () => {

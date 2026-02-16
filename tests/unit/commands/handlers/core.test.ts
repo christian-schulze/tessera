@@ -28,11 +28,13 @@ describe("Core command handlers", () => {
     const window = {};
     const focused = new WindowContainer("win", window, 1, "app", "title");
     const adapter = makeAdapter();
+    const config = { minTileWidth: 300, minTileHeight: 240 };
 
     const result = focusHandler.execute(makeCommand("focus"), {
       root: focused as any,
       focused,
       adapter,
+      config,
     });
 
     expect(result.success).toBeTrue();
@@ -47,11 +49,13 @@ describe("Core command handlers", () => {
     split.addChild(windowB);
 
     const adapter = makeAdapter();
+    const config = { minTileWidth: 300, minTileHeight: 240 };
 
     const result = moveHandler.execute(makeCommand("move", ["left"]), {
       root: split as any,
       focused: windowB,
       adapter,
+      config,
     });
 
     expect(result.success).toBeTrue();
@@ -64,17 +68,145 @@ describe("Core command handlers", () => {
     const window = new WindowContainer("win", {}, 1, "app", "title");
     window.proportion = 1;
 
+    const parent = new SplitContainer("parent");
+    parent.rect = { x: 0, y: 0, width: 1000, height: 800 };
+    const sibling = new WindowContainer("sib", {}, 2, "app", "sibling");
+    sibling.proportion = 1;
+    parent.addChild(window);
+    parent.addChild(sibling);
+    const adapter = makeAdapter();
+    const config = { minTileWidth: 300, minTileHeight: 240 };
+
     const result = resizeHandler.execute(
-      makeCommand("resize", ["grow", "width", "0.5"]),
+      makeCommand("resize", ["grow", "width", "10"]),
       {
-        root: window as any,
+        root: parent as any,
         focused: window,
-        adapter: makeAdapter(),
+        adapter,
+        config,
       }
     );
 
     expect(result.success).toBeTrue();
-    expect(window.proportion).toBeCloseTo(1.5);
+    expect(window.rect.width).toBeCloseTo(510);
+    expect(adapter.moveResize).toHaveBeenCalled();
+  });
+
+  it("resize uses ppt units when provided", () => {
+    const window = new WindowContainer("win", {}, 1, "app", "title");
+    window.proportion = 1;
+
+    const parent = new SplitContainer("parent");
+    parent.rect = { x: 0, y: 0, width: 1000, height: 800 };
+    const sibling = new WindowContainer("sib", {}, 2, "app", "sibling");
+    sibling.proportion = 1;
+    parent.addChild(window);
+    parent.addChild(sibling);
+    const adapter = makeAdapter();
+    const config = { minTileWidth: 300, minTileHeight: 240 };
+
+    const result = resizeHandler.execute(
+      makeCommand("resize", ["grow", "width", "10", "ppt"]),
+      {
+        root: parent as any,
+        focused: window,
+        adapter,
+        config,
+      }
+    );
+
+    expect(result.success).toBeTrue();
+    expect(window.rect.width).toBeCloseTo(600);
+    expect(adapter.moveResize).toHaveBeenCalled();
+  });
+
+  it("resize set uses absolute sizes", () => {
+    const window = new WindowContainer("win", {}, 1, "app", "title");
+    window.proportion = 1;
+
+    const parent = new SplitContainer("parent");
+    parent.rect = { x: 0, y: 0, width: 1000, height: 800 };
+    const sibling = new WindowContainer("sib", {}, 2, "app", "sibling");
+    sibling.proportion = 1;
+    parent.addChild(window);
+    parent.addChild(sibling);
+    const adapter = makeAdapter();
+    const config = { minTileWidth: 300, minTileHeight: 240 };
+
+    const result = resizeHandler.execute(
+      makeCommand("resize", ["set", "width", "60", "ppt"]),
+      {
+        root: parent as any,
+        focused: window,
+        adapter,
+        config,
+      }
+    );
+
+    expect(result.success).toBeTrue();
+    expect(window.rect.width).toBeCloseTo(600);
+    expect(adapter.moveResize).toHaveBeenCalled();
+  });
+
+  it("resize applies sequential ppt adjustments against parent size", () => {
+    const window = new WindowContainer("win", {}, 1, "app", "title");
+    window.proportion = 1;
+
+    const parent = new SplitContainer("parent");
+    parent.rect = { x: 0, y: 0, width: 1000, height: 800 };
+    const sibling = new WindowContainer("sib", {}, 2, "app", "sibling");
+    sibling.proportion = 1;
+    parent.addChild(window);
+    parent.addChild(sibling);
+    const adapter = makeAdapter();
+    const config = { minTileWidth: 300, minTileHeight: 240 };
+
+    resizeHandler.execute(makeCommand("resize", ["grow", "width", "20", "ppt"]), {
+      root: parent as any,
+      focused: window,
+      adapter,
+      config,
+    });
+
+    resizeHandler.execute(makeCommand("resize", ["shrink", "width", "10", "ppt"]), {
+      root: parent as any,
+      focused: window,
+      adapter,
+      config,
+    });
+
+    expect(window.rect.width).toBeCloseTo(600);
+  });
+
+  it("resize clamps to sibling min sizes", () => {
+    const minWindow = {
+      get_min_size: () => [360, 0] as [number, number],
+    };
+    const window = new WindowContainer("win", {}, 1, "app", "title");
+    window.proportion = 1;
+
+    const parent = new SplitContainer("parent");
+    parent.rect = { x: 0, y: 0, width: 1000, height: 800 };
+    const sibling = new WindowContainer("sib", minWindow, 2, "app", "sibling");
+    sibling.proportion = 1;
+    parent.addChild(window);
+    parent.addChild(sibling);
+    const adapter = makeAdapter();
+    const config = { minTileWidth: 300, minTileHeight: 240 };
+
+    const result = resizeHandler.execute(
+      makeCommand("resize", ["grow", "width", "60", "ppt"]),
+      {
+        root: parent as any,
+        focused: window,
+        adapter,
+        config,
+      }
+    );
+
+    expect(result.success).toBeTrue();
+    expect(window.rect.width).toBeCloseTo(640);
+    expect(adapter.moveResize).toHaveBeenCalled();
   });
 
   it("split sets parent layout to splitv", () => {
@@ -86,6 +218,7 @@ describe("Core command handlers", () => {
       root: parent as any,
       focused: window,
       adapter: makeAdapter(),
+      config: { minTileWidth: 300, minTileHeight: 240 },
     });
 
     expect(result.success).toBeTrue();
@@ -98,11 +231,13 @@ describe("Core command handlers", () => {
     parent.addChild(window);
 
     const adapter = makeAdapter();
+    const config = { minTileWidth: 300, minTileHeight: 240 };
 
     const result = layoutHandler.execute(makeCommand("layout", ["stacking"]), {
       root: parent as any,
       focused: window,
       adapter,
+      config,
     });
 
     expect(result.success).toBeTrue();

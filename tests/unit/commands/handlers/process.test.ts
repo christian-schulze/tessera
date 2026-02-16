@@ -32,6 +32,7 @@ describe("Process command handlers", () => {
       root: {} as any,
       focused: null,
       adapter,
+      config: { minTileWidth: 300, minTileHeight: 240 },
     });
 
     expect(result.success).toBeTrue();
@@ -47,6 +48,7 @@ describe("Process command handlers", () => {
       root: {} as any,
       focused,
       adapter,
+      config: { minTileWidth: 300, minTileHeight: 240 },
     });
 
     expect(result.success).toBeTrue();

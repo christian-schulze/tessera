@@ -50,6 +50,7 @@ describe("Workspace and window state handlers", () => {
       root,
       focused: workspaceA,
       adapter,
+      config: { minTileWidth: 300, minTileHeight: 240 },
     });
 
     expect(result.success).toBeTrue();
@@ -66,6 +67,7 @@ describe("Workspace and window state handlers", () => {
       root: focused as any,
       focused,
       adapter,
+      config: { minTileWidth: 300, minTileHeight: 240 },
     });
 
     expect(markResult.success).toBeTrue();
@@ -75,6 +77,7 @@ describe("Workspace and window state handlers", () => {
       root: focused as any,
       focused,
       adapter,
+      config: { minTileWidth: 300, minTileHeight: 240 },
     });
 
     expect(unmarkResult.success).toBeTrue();
@@ -93,6 +96,7 @@ describe("Workspace and window state handlers", () => {
       root: workspace as any,
       focused,
       adapter,
+      config: { minTileWidth: 300, minTileHeight: 240 },
     });
 
     expect(result.success).toBeTrue();
@@ -116,6 +120,7 @@ describe("Workspace and window state handlers", () => {
       root: workspace as any,
       focused,
       adapter,
+      config: { minTileWidth: 300, minTileHeight: 240 },
     });
 
     expect(result.success).toBeTrue();
@@ -134,6 +139,7 @@ describe("Workspace and window state handlers", () => {
       root: focused as any,
       focused,
       adapter,
+      config: { minTileWidth: 300, minTileHeight: 240 },
     });
 
     expect(result.success).toBeTrue();

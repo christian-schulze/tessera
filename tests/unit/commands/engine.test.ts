@@ -34,7 +34,12 @@ describe("Command engine", () => {
       criteria: [],
     };
 
-    const output = engine.execute(command, { root, focused, adapter });
+    const output = engine.execute(command, {
+      root,
+      focused,
+      adapter,
+      config: { minTileWidth: 300, minTileHeight: 240 },
+    });
 
     expect(output).toEqual(result);
   });
@@ -59,7 +64,12 @@ describe("Command engine", () => {
       criteria: [],
     };
 
-    const output = engine.execute(command, { root, focused, adapter });
+    const output = engine.execute(command, {
+      root,
+      focused,
+      adapter,
+      config: { minTileWidth: 300, minTileHeight: 240 },
+    });
 
     expect(output.success).toBeFalse();
     expect(output.message).toBe("Unknown command: nope");

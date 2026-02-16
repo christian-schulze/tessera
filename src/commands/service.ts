@@ -3,6 +3,7 @@ import type { Container } from "../tree/container.js";
 import type { CommandEngine } from "./engine.js";
 import type { WindowAdapter } from "./adapter.js";
 import type { CommandResult } from "./types.js";
+import type { TesseraConfig } from "../config.js";
 import { parseCommandString } from "./parser.js";
 import { findFocusedContainer } from "./index.js";
 
@@ -10,6 +11,7 @@ interface CommandServiceDeps {
   engine: CommandEngine;
   adapter: WindowAdapter;
   getRoot: () => RootContainer | null;
+  getConfig: () => TesseraConfig;
   getFocused?: (root: RootContainer) => Container | null;
   logger?: (message: string) => void;
 }
@@ -35,6 +37,7 @@ export function buildCommandService(deps: CommandServiceDeps): CommandService {
         root,
         focused,
         adapter: deps.adapter,
+        config: deps.getConfig(),
         logger: deps.logger,
       });
     },
