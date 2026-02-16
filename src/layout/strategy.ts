@@ -145,6 +145,26 @@ const splitVStrategy: LayoutStrategy = {
   },
 };
 
+const alternatingStrategy: LayoutStrategy = {
+  id: Layout.Alternating,
+  computeRects: (container) => {
+    computeSplitRects(container, true);
+  },
+  shouldFloatOnAdd: (workspaceRect, projectedCount, minTileWidth) => {
+    return workspaceRect.width / projectedCount < minTileWidth;
+  },
+  shouldFloatOnRetry: (
+    workspaceRect,
+    tiledCount,
+    minTileWidth,
+    _minTileHeight,
+    actualRect
+  ) => {
+    const minWidth = Math.max(minTileWidth, actualRect.width);
+    return workspaceRect.width / tiledCount < minWidth;
+  },
+};
+
 const fallbackStrategy: LayoutStrategy = {
   id: Layout.SplitV,
   computeRects: (container) => {
@@ -173,6 +193,7 @@ const fallbackStrategy: LayoutStrategy = {
 const layoutStrategies = new Map<Layout, LayoutStrategy>([
   [Layout.SplitH, splitHStrategy],
   [Layout.SplitV, splitVStrategy],
+  [Layout.Alternating, alternatingStrategy],
 ]);
 
 export const getLayoutStrategy = (layout: Layout): LayoutStrategy => {

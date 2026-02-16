@@ -13,4 +13,10 @@ describe("getLayoutStrategy", () => {
 
     expect(strategy.id).toBe(Layout.SplitV);
   });
+
+  it("returns Alternating strategy for Alternating layout", () => {
+    const strategy = getLayoutStrategy(Layout.Alternating);
+
+    expect(strategy.id).toBe(Layout.Alternating);
+  });
 });
