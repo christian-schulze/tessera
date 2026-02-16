@@ -701,12 +701,13 @@ git commit -m "docs: record phase 2 manual verification"
 
 ## Manual Verification (Required)
 
-- Status: PARTIAL (IPC verified, Looking Glass return issue)
+- Status: COMPLETE
 - Date: 2026-02-16
 - Notes:
   - `make nested`: Looking Glass `globalThis.__tessera.execute("splitv")` returned `undefined`, but manually opening a new console window tiled vertically as expected.
   - `TESSERA_IPC=1 make nested`: IPC execute worked as expected for manual commands.
-  - SplitV overflow (min height): NOT VERIFIED (expected to float when height < `minTileHeight`).
+  - SplitV overflow now floats on min height (verified during nested manual tests).
+  - `resize set` and `resize grow/shrink` behave as expected after min-size clamp changes.
 
 ## Config Notes
 
