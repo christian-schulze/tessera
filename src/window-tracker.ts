@@ -12,6 +12,10 @@ import { applyLayout } from "./tree/apply-layout.js";
 import type { WindowAdapter } from "./commands/adapter.js";
 import type { TesseraConfig } from "./config.js";
 import { updateFocusedWindow } from "./window-tracker-focus.js";
+import {
+  shouldFloatOnAdd,
+  shouldFloatOnRetry,
+} from "./window-tracker-overflow.js";
 
 export class WindowTracker {
   private root: RootContainer;
@@ -147,15 +151,19 @@ export class WindowTracker {
     );
 
     const split = this.findSplitTarget(workspace);
-    const minTileWidth = this.getConfig().minTileWidth;
+    const { minTileWidth, minTileHeight } = this.getConfig();
     const tiledCount = split.children.filter(
       (child) => child.type === ContainerType.Window &&
         !(child as WindowContainer).floating
     ).length;
     const projectedCount = tiledCount + 1;
-    const shouldFloat =
-      split.layout === Layout.SplitH &&
-      workspace.rect.width / projectedCount < minTileWidth;
+    const shouldFloat = shouldFloatOnAdd(
+      split.layout,
+      workspace.rect,
+      projectedCount,
+      minTileWidth,
+      minTileHeight
+    );
 
     if (shouldFloat) {
       container.floating = true;
@@ -266,14 +274,19 @@ export class WindowTracker {
         const workspace = this.findWorkspace(container);
         const parent = container.parent;
         if (workspace && parent) {
-          const minWidth = Math.max(this.getConfig().minTileWidth, actual.width);
+          const { minTileWidth, minTileHeight } = this.getConfig();
           const tiledCount = parent.children.filter(
             (child) => child.type === ContainerType.Window &&
               !(child as WindowContainer).floating
           ).length;
-          const shouldFloat =
-            parent.layout === Layout.SplitH &&
-            workspace.rect.width / tiledCount < minWidth;
+          const shouldFloat = shouldFloatOnRetry(
+            parent.layout,
+            workspace.rect,
+            tiledCount,
+            minTileWidth,
+            minTileHeight,
+            actual
+          );
 
           if (shouldFloat) {
             container.floating = true;
