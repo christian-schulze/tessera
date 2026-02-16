@@ -717,6 +717,4 @@ git commit -m "docs: record phase 2 manual verification"
 
 ## Future Notes
 
-- Consider adding a user-defined hook (configurable/scriptable) to decide what happens when tiling space runs out (e.g., float the new window, switch layout, or prompt).
-- Consider making the layout retry window configurable via config/IPC (e.g., max attempts or total retry duration).
-- Fix Looking Glass return value for non-IPC `globalThis.__tessera.execute` in nested sessions (currently returns `undefined`).
+- See backlog: `docs/plans/2026-02-16-backlog.md`.
