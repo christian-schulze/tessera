@@ -706,6 +706,12 @@ git commit -m "docs: record phase 2 manual verification"
 - Notes:
   - `make nested`: Looking Glass `globalThis.__tessera.execute("splitv")` returned `undefined`, but manually opening a new console window tiled vertically as expected.
   - `TESSERA_IPC=1 make nested`: IPC execute worked as expected for manual commands.
+  - SplitV overflow (min height): NOT VERIFIED (expected to float when height < `minTileHeight`).
+
+## Config Notes
+
+- `minTileWidth` (default 300): minimum tile width before new tiling windows float.
+- `minTileHeight` (default 240): minimum tile height before new vertical tiling windows float.
 
 ## Future Notes
 
