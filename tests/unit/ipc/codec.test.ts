@@ -28,12 +28,12 @@ describe("ipc codec", () => {
 
   it("decodes a config request", () => {
     const request = decodeRequest(
-      '{"id":"3","method":"config","params":{"minTileWidth":360}}'
+      '{"id":"3","method":"config","params":{"minTileWidth":360,"minTileHeight":280}}'
     );
     expect(request).toEqual({
       id: "3",
       method: "config",
-      params: { minTileWidth: 360 },
+      params: { minTileWidth: 360, minTileHeight: 280 },
     });
   });
 });

@@ -52,7 +52,7 @@ export default class TesseraExtension extends Extension {
   private lastPollMonitors = 0;
   private lastPollOutputs = 0;
   private pollingActive = false;
-  private config: TesseraConfig = { minTileWidth: 300 };
+  private config: TesseraConfig = { minTileWidth: 300, minTileHeight: 240 };
 
   private logToFile(message: string): void {
     const path = "/tmp/tessera-enable.log";

@@ -12,10 +12,12 @@ export type ExecuteParams = {
 
 export type ConfigParams = {
   minTileWidth?: number;
+  minTileHeight?: number;
 };
 
 export type ConfigResponse = {
   minTileWidth: number;
+  minTileHeight: number;
 };
 
 export type IpcRequest = {

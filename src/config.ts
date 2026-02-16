@@ -1,14 +1,26 @@
-import GLib from "gi://GLib";
-
 export type TesseraConfig = {
   minTileWidth: number;
+  minTileHeight: number;
 };
 
 export const DEFAULT_CONFIG: TesseraConfig = {
   minTileWidth: 300,
+  minTileHeight: 240,
 };
 
 const normalizeMinTileWidth = (value: unknown): number | null => {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+
+  if (value <= 0) {
+    return null;
+  }
+
+  return Math.floor(value);
+};
+
+const normalizeMinTileHeight = (value: unknown): number | null => {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return null;
   }
@@ -28,16 +40,30 @@ export const applyConfig = (
     return target;
   }
 
-  const candidate = updates as { minTileWidth?: unknown };
+  const candidate = updates as { minTileWidth?: unknown; minTileHeight?: unknown };
   const minTileWidth = normalizeMinTileWidth(candidate.minTileWidth);
   if (minTileWidth !== null) {
     target.minTileWidth = minTileWidth;
+  }
+
+  const minTileHeight = normalizeMinTileHeight(candidate.minTileHeight);
+  if (minTileHeight !== null) {
+    target.minTileHeight = minTileHeight;
   }
 
   return target;
 };
 
 export const loadConfig = (): TesseraConfig => {
+  const GLib = (() => {
+    const glib = (globalThis as {
+      imports?: { gi?: { GLib?: unknown } };
+    }).imports?.gi?.GLib;
+    if (!glib) {
+      throw new Error("GLib is unavailable");
+    }
+    return glib as typeof import("gi://GLib");
+  })();
   const config: TesseraConfig = { ...DEFAULT_CONFIG };
   const home = GLib.get_home_dir();
   const path = GLib.build_filenamev([home, ".config", "tessera", "config.js"]);

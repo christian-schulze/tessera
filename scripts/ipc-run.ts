@@ -32,7 +32,9 @@ const readSockets = async () => {
 const usage = () => {
   console.error("Usage: bunx tsx scripts/ipc-run.ts <method> [command]");
   console.error("Methods: tree, ping, version, execute, debug, config");
-  console.error("Config: bunx tsx scripts/ipc-run.ts config [minTileWidth]");
+  console.error(
+    "Config: bunx tsx scripts/ipc-run.ts config [minTileWidth] [minTileHeight]"
+  );
 };
 
 const method = process.argv[2];
@@ -45,10 +47,14 @@ let params: Record<string, unknown> | undefined;
 if (method === "execute") {
   params = { command: process.argv.slice(3).join(" ") };
 }
-if (method === "config" && process.argv[3]) {
-  const value = Number(process.argv[3]);
-  if (!Number.isNaN(value)) {
-    params = { minTileWidth: value };
+if (method === "config") {
+  const minTileWidth = process.argv[3] ? Number(process.argv[3]) : undefined;
+  const minTileHeight = process.argv[4] ? Number(process.argv[4]) : undefined;
+  if (!Number.isNaN(minTileWidth ?? NaN)) {
+    params = { ...(params ?? {}), minTileWidth };
+  }
+  if (!Number.isNaN(minTileHeight ?? NaN)) {
+    params = { ...(params ?? {}), minTileHeight };
   }
 }
 

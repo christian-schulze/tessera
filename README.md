@@ -60,6 +60,7 @@ Create `~/.config/tessera/config.js` to override defaults:
 ```js
 module.exports = {
   minTileWidth: 300,
+  minTileHeight: 240,
 };
 ```
 
