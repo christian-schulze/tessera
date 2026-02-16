@@ -12,6 +12,7 @@ import { buildCommandEngine, registerDefaultHandlers } from "./commands/index.js
 import { buildCommandService } from "./commands/service.js";
 import type { WindowAdapter } from "./commands/adapter.js";
 import { IpcServer } from "./ipc/server.js";
+import { buildTesseraService } from "./service/tessera.js";
 import { buildMonitorInfos } from "./monitors.js";
 import { buildDebugPayload } from "./ipc/debug.js";
 import { applyConfig, loadConfig, type TesseraConfig } from "./config.js";
@@ -224,110 +225,108 @@ export default class TesseraExtension extends Extension {
         getRoot: () => this.root,
       });
 
-      if (GLib.getenv("TESSERA_IPC") === "1") {
-        this.ipcServer = new IpcServer();
-        this.ipcServer.start({
-          execute: commandService.execute,
-          tree: () => this.root?.toJSON(),
-          ping: () => ({ ok: true }),
-          version: () => ({
-            uuid: this.uuid,
-            version:
-              (this.metadata as { version?: unknown } | undefined)?.version ?? null,
-          }),
-          debug: () => {
-            const monitorInfos = buildMonitorInfos(Main.layoutManager, global.display);
-            const workAreas = monitorInfos.map((monitor) => ({
-              x: monitor.workArea.x,
-              y: monitor.workArea.y,
-              width: monitor.workArea.width,
-              height: monitor.workArea.height,
-            }));
-            const glib = GLib as unknown as {
-              getpid?: () => number;
-              get_pid?: () => number;
-            };
-            const pid = glib.getpid?.() ?? glib.get_pid?.() ?? 0;
-            const windowActors = global.get_window_actors?.() ?? [];
-            const windows = windowActors
-              .map((actor) => {
-                const metaWindow = (actor as { meta_window?: Meta.Window })
-                  .meta_window;
-                if (!metaWindow) {
-                  return null;
-                }
-                const frameRect = metaWindow.get_frame_rect();
-                const minSize = (metaWindow as unknown as {
-                  get_min_size?: () => [number, number];
-                }).get_min_size?.();
-                const minWidth = minSize?.[0] ?? 0;
-                const minHeight = minSize?.[1] ?? 0;
-                return {
-                  id: metaWindow.get_id(),
-                  title: metaWindow.get_title(),
-                  wmClass: metaWindow.get_wm_class?.() ?? null,
-                  type: metaWindow.get_window_type(),
-                  maximized: metaWindow.is_maximized?.() ?? false,
-                  frameRect: {
-                    x: frameRect.x,
-                    y: frameRect.y,
-                    width: frameRect.width,
-                    height: frameRect.height,
-                  },
-                  minWidth,
-                  minHeight,
-                  canMove: metaWindow.allows_move(),
-                  canResize: metaWindow.allows_resize(),
-                };
-              })
-              .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
-
-            return buildDebugPayload({
-              root: this.root,
-              monitors: {
-                layoutManagerCount: Main.layoutManager.monitors.length,
-                displayCount: global.display.get_n_monitors?.() ?? 0,
-                workAreas,
-              },
-              ipc: {
-                socketPath: this.ipcServer?.getSocketPath() ?? null,
-                pid,
-              },
-              extension: {
-                rebuildCount: this.rebuildCount,
-                lastRebuildReason: this.lastRebuildReason,
-                lastRebuildMonitors: this.lastRebuildMonitors,
-                lastRebuildOutputs: this.lastRebuildOutputs,
-                pollAttempts: this.pollAttempts,
-                lastPollMonitors: this.lastPollMonitors,
-                lastPollOutputs: this.lastPollOutputs,
-                pollingActive: this.pollingActive,
-              },
-              windows,
-              version: {
-                uuid: this.uuid,
-                version: (() => {
-                  const value =
-                    (this.metadata as { version?: unknown } | undefined)?.version ??
-                    null;
-                  return typeof value === "string" ? value : null;
-                })(),
-              },
-            });
-          },
-          config: (params) => {
-            if (params) {
-              applyConfig(this.config, params);
+      const buildDebug = () => {
+        const monitorInfos = buildMonitorInfos(Main.layoutManager, global.display);
+        const workAreas = monitorInfos.map((monitor) => ({
+          x: monitor.workArea.x,
+          y: monitor.workArea.y,
+          width: monitor.workArea.width,
+          height: monitor.workArea.height,
+        }));
+        const glib = GLib as unknown as {
+          getpid?: () => number;
+          get_pid?: () => number;
+        };
+        const pid = glib.getpid?.() ?? glib.get_pid?.() ?? 0;
+        const windowActors = global.get_window_actors?.() ?? [];
+        const windows = windowActors
+          .map((actor) => {
+            const metaWindow = (actor as { meta_window?: Meta.Window }).meta_window;
+            if (!metaWindow) {
+              return null;
             }
-            return { ...this.config };
+            const frameRect = metaWindow.get_frame_rect();
+            const minSize = (metaWindow as unknown as {
+              get_min_size?: () => [number, number];
+            }).get_min_size?.();
+            const minWidth = minSize?.[0] ?? 0;
+            const minHeight = minSize?.[1] ?? 0;
+            return {
+              id: metaWindow.get_id(),
+              title: metaWindow.get_title(),
+              wmClass: metaWindow.get_wm_class?.() ?? null,
+              type: metaWindow.get_window_type(),
+              maximized: metaWindow.is_maximized?.() ?? false,
+              frameRect: {
+                x: frameRect.x,
+                y: frameRect.y,
+                width: frameRect.width,
+                height: frameRect.height,
+              },
+              minWidth,
+              minHeight,
+              canMove: metaWindow.allows_move(),
+              canResize: metaWindow.allows_resize(),
+            };
+          })
+          .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+
+        return buildDebugPayload({
+          root: this.root,
+          monitors: {
+            layoutManagerCount: Main.layoutManager.monitors.length,
+            displayCount: global.display.get_n_monitors?.() ?? 0,
+            workAreas,
+          },
+          ipc: {
+            socketPath: this.ipcServer?.getSocketPath() ?? null,
+            pid,
+          },
+          extension: {
+            rebuildCount: this.rebuildCount,
+            lastRebuildReason: this.lastRebuildReason,
+            lastRebuildMonitors: this.lastRebuildMonitors,
+            lastRebuildOutputs: this.lastRebuildOutputs,
+            pollAttempts: this.pollAttempts,
+            lastPollMonitors: this.lastPollMonitors,
+            lastPollOutputs: this.lastPollOutputs,
+            pollingActive: this.pollingActive,
+          },
+          windows,
+          version: {
+            uuid: this.uuid,
+            version: (() => {
+              const value =
+                (this.metadata as { version?: unknown } | undefined)?.version ??
+                null;
+              return typeof value === "string" ? value : null;
+            })(),
           },
         });
+      };
+
+      const tesseraService = buildTesseraService({
+        commandService,
+        getRoot: () => this.root,
+        getConfig: () => this.config,
+        applyConfig,
+        getVersion: () => ({
+          uuid: this.uuid,
+          version:
+            (this.metadata as { version?: unknown } | undefined)?.version ?? null,
+        }),
+        getDebug: buildDebug,
+      });
+
+      if (GLib.getenv("TESSERA_IPC") === "1") {
+        this.ipcServer = new IpcServer();
+        this.ipcServer.start(tesseraService);
       }
 
       (globalThis as unknown as { __tessera?: TesseraGlobal }).__tessera = {
         root: this.root as RootContainer,
         tracker: this.tracker as WindowTracker,
-        tree: () => this.root?.toJSON(),
+        tree: tesseraService.tree,
         execute: commandService.execute,
       };
     } catch (error) {
