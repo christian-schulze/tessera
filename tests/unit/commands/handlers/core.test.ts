@@ -17,7 +17,7 @@ describe("Core command handlers", () => {
     activate(window: unknown) {
       this.activated.push(window);
     },
-    moveResize: () => {},
+    moveResize: jasmine.createSpy("moveResize"),
     setFullscreen: () => {},
     setFloating: () => {},
     close: () => {},
@@ -46,15 +46,18 @@ describe("Core command handlers", () => {
     split.addChild(windowA);
     split.addChild(windowB);
 
+    const adapter = makeAdapter();
+
     const result = moveHandler.execute(makeCommand("move", ["left"]), {
       root: split as any,
       focused: windowB,
-      adapter: makeAdapter(),
+      adapter,
     });
 
     expect(result.success).toBeTrue();
     expect(split.children[0]).toBe(windowB);
     expect(split.children[1]).toBe(windowA);
+    expect(adapter.moveResize).toHaveBeenCalled();
   });
 
   it("resize adjusts focused window proportion", () => {
@@ -94,13 +97,16 @@ describe("Core command handlers", () => {
     const parent = new SplitContainer("parent", Layout.SplitH);
     parent.addChild(window);
 
+    const adapter = makeAdapter();
+
     const result = layoutHandler.execute(makeCommand("layout", ["stacking"]), {
       root: parent as any,
       focused: window,
-      adapter: makeAdapter(),
+      adapter,
     });
 
     expect(result.success).toBeTrue();
     expect(parent.layout).toBe(Layout.Stacking);
+    expect(adapter.moveResize).toHaveBeenCalled();
   });
 });

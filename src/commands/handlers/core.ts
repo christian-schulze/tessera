@@ -2,6 +2,8 @@ import type { CommandHandler, CommandResult } from "../types.js";
 import type { CommandContext } from "../context.js";
 import { Layout } from "../../tree/container.js";
 import { WindowContainer } from "../../tree/window-container.js";
+import { reflow } from "../../tree/reflow.js";
+import { applyLayout } from "../../tree/apply-layout.js";
 
 const result = (success: boolean, message?: string): CommandResult => ({
   success,
@@ -53,6 +55,9 @@ export const moveHandler: CommandHandler = {
     parent.children[swapWith] = focused;
     parent.children[index] = temp;
 
+    reflow(parent);
+    applyLayout(parent, context.adapter);
+
     return result(true);
   },
 };
@@ -90,6 +95,9 @@ export const splitHandler: CommandHandler = {
     const value = command.action === "splitv" || command.args[0] === "v";
     focused.parent.setLayout(value ? Layout.SplitV : Layout.SplitH);
 
+    reflow(focused.parent);
+    applyLayout(focused.parent, context.adapter);
+
     return result(true);
   },
 };
@@ -116,6 +124,10 @@ export const layoutHandler: CommandHandler = {
     }
 
     focused.parent.setLayout(layout);
+
+    reflow(focused.parent);
+    applyLayout(focused.parent, context.adapter);
+
     return result(true);
   },
 };
