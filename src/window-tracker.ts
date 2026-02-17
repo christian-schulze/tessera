@@ -1,6 +1,6 @@
 import type MetaModule from "gi://Meta";
 import { normalizeTree, reflow } from "./tree/reflow.js";
-import { Container, ContainerType } from "./tree/container.js";
+import { Container, ContainerType, Layout } from "./tree/container.js";
 import { RootContainer } from "./tree/root-container.js";
 import { SplitContainer } from "./tree/split-container.js";
 import { WorkspaceContainer } from "./tree/workspace-container.js";
@@ -412,7 +412,7 @@ export class WindowTracker {
       return existing;
     }
 
-    const split = new SplitContainer(this.root.nextId());
+    const split = new SplitContainer(this.root.nextId(), Layout.Alternating);
     split.rect = { ...workspace.rect };
     workspace.addChild(split);
     return split;

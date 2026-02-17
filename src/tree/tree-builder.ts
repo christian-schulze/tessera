@@ -1,4 +1,5 @@
 import type { Rect } from "./container.js";
+import { Layout } from "./container.js";
 import { RootContainer } from "./root-container.js";
 import { OutputContainer } from "./output-container.js";
 import { WorkspaceContainer } from "./workspace-container.js";
@@ -36,7 +37,7 @@ export class TreeBuilder {
       workspace.rect = this.toRect(workArea);
       output.addChild(workspace);
 
-      const split = new SplitContainer(root.nextId());
+      const split = new SplitContainer(root.nextId(), Layout.Alternating);
       split.rect = this.toRect(workArea);
       workspace.addChild(split);
     }
