@@ -1,8 +1,5 @@
-import Meta from "gi://Meta";
-import Shell from "gi://Shell";
-import GLib from "gi://GLib";
-
-import { reflow } from "./tree/reflow.js";
+import type MetaModule from "gi://Meta";
+import { normalizeTree, reflow } from "./tree/reflow.js";
 import { Container, ContainerType, Layout } from "./tree/container.js";
 import { RootContainer } from "./tree/root-container.js";
 import { SplitContainer } from "./tree/split-container.js";
@@ -13,6 +10,35 @@ import type { WindowAdapter } from "./commands/adapter.js";
 import type { TesseraConfig } from "./config.js";
 import { updateFocusedWindow } from "./window-tracker-focus.js";
 import { getLayoutStrategy } from "./layout/strategy.js";
+import { appendLog } from "./logging.js";
+import { insertWindowWithStrategy } from "./window-insertion.js";
+
+type GiModules = {
+  Shell?: typeof import("gi://Shell").default;
+  GLib?: typeof import("gi://GLib").default;
+};
+
+const gi = (globalThis as { imports?: { gi?: GiModules } }).imports?.gi;
+const Shell = gi?.Shell as typeof import("gi://Shell").default;
+const GLib = gi?.GLib as typeof import("gi://GLib").default;
+
+const findFocusedWindow = (container: Container): WindowContainer | null => {
+  if (container.focused && container instanceof WindowContainer) {
+    return container;
+  }
+
+  for (const child of container.children) {
+    const focused = findFocusedWindow(child);
+    if (focused) {
+      return focused;
+    }
+  }
+
+  return null;
+};
+
+type MetaWindow = MetaModule.Window;
+
 
 export class WindowTracker {
   private root: RootContainer;
@@ -35,7 +61,7 @@ export class WindowTracker {
     this.adapter = {
       activate: () => {},
       moveResize: (window: unknown, rect) => {
-        (window as Meta.Window).move_resize_frame(
+        (window as MetaWindow).move_resize_frame(
           false,
           rect.x,
           rect.y,
@@ -58,24 +84,24 @@ export class WindowTracker {
     this.displaySignal = global.display.connect(
       "window-created",
       (_display, window) => {
-        this.trackWindow(window as Meta.Window);
+        this.trackWindow(window as MetaWindow);
       }
     );
 
     this.focusSignal = global.display.connect(
       "notify::focus-window",
       () => {
-        const focused = global.display.get_focus_window() as Meta.Window | null;
+        const focused = global.display.get_focus_window() as MetaWindow | null;
         updateFocusedWindow(this.root, this.windowMap, focused);
       }
     );
 
     for (const actor of global.get_window_actors()) {
-      const window = actor.meta_window as Meta.Window;
+      const window = actor.meta_window as MetaWindow;
       this.trackWindow(window);
     }
 
-    const focused = global.display.get_focus_window() as Meta.Window | null;
+    const focused = global.display.get_focus_window() as MetaWindow | null;
     updateFocusedWindow(this.root, this.windowMap, focused);
   }
 
@@ -122,7 +148,7 @@ export class WindowTracker {
     ) as WorkspaceContainer | undefined) ?? null;
   }
 
-  private trackWindow(window: Meta.Window): void {
+  private trackWindow(window: MetaWindow): void {
     const windowId = this.getWindowId(window);
     if (this.windowMap.has(windowId)) {
       return;
@@ -140,7 +166,7 @@ export class WindowTracker {
     const appId = this.getAppId(window);
     const title = window.get_title() ?? "";
     const container = new WindowContainer(
-      windowId,
+      this.root.nextId(),
       window,
       windowId,
       appId,
@@ -174,7 +200,16 @@ export class WindowTracker {
       this.adapter.moveResize(window, container.rect);
     }
 
-    split.addChild(container);
+    const focused = findFocusedWindow(this.root) ?? container;
+    const mode = "focused";
+    insertWindowWithStrategy({
+      root: this.root,
+      split,
+      container,
+      focused,
+      mode,
+      log: appendLog,
+    });
 
     this.windowMap.set(windowId, container);
     this.attachWindowSignals(windowId, window, container);
@@ -189,7 +224,7 @@ export class WindowTracker {
 
   private attachWindowSignals(
     windowId: number,
-    window: Meta.Window,
+    window: MetaWindow,
     container: WindowContainer
   ): void {
     const signalIds: number[] = [];
@@ -226,7 +261,7 @@ export class WindowTracker {
   }
 
   private scheduleLayoutRetry(container: WindowContainer): void {
-    const window = container.window as Meta.Window;
+    const window = container.window as MetaWindow;
     const windowId = this.getWindowId(window);
     if (this.layoutRetries.has(windowId)) {
       return;
@@ -329,7 +364,7 @@ export class WindowTracker {
     }
 
     for (const signalId of signals) {
-      (container.window as Meta.Window).disconnect(signalId);
+      (container.window as MetaWindow).disconnect(signalId);
     }
 
     this.windowSignals.delete(windowId);
@@ -351,11 +386,20 @@ export class WindowTracker {
     this.layoutRetries.delete(windowId);
 
     if (parent) {
+      const strategy = getLayoutStrategy(parent.layout);
+      const result = strategy.onWindowRemoved?.({
+        root: this.root,
+        parent,
+        removed: container,
+      });
+      if (!result?.handled) {
+        normalizeTree(parent);
+      }
       reflow(parent);
       applyLayout(parent, this.adapter);
     }
 
-    const focused = global.display.get_focus_window() as Meta.Window | null;
+    const focused = global.display.get_focus_window() as MetaWindow | null;
     updateFocusedWindow(this.root, this.windowMap, focused);
   }
 
@@ -368,13 +412,13 @@ export class WindowTracker {
       return existing;
     }
 
-    const split = new SplitContainer(this.nextContainerId());
+    const split = new SplitContainer(this.root.nextId(), Layout.Alternating);
     split.rect = { ...workspace.rect };
     workspace.addChild(split);
     return split;
   }
 
-  private getWindowId(window: Meta.Window): number {
+  private getWindowId(window: MetaWindow): number {
     if (typeof window.get_id === "function") {
       return window.get_id();
     }
@@ -382,7 +426,7 @@ export class WindowTracker {
     return window.get_stable_sequence();
   }
 
-  private getAppId(window: Meta.Window): string {
+  private getAppId(window: MetaWindow): string {
     const tracker = Shell.WindowTracker.get_default();
     const app = tracker.get_window_app(window);
     if (app) {
@@ -392,7 +436,4 @@ export class WindowTracker {
     return window.get_wm_class() ?? "";
   }
 
-  private nextContainerId(): number {
-    return Math.max(0, ...this.windowMap.keys()) + 1;
-  }
 }

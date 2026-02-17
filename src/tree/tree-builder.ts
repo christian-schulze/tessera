@@ -1,4 +1,5 @@
 import type { Rect } from "./container.js";
+import { Layout } from "./container.js";
 import { RootContainer } from "./root-container.js";
 import { OutputContainer } from "./output-container.js";
 import { WorkspaceContainer } from "./workspace-container.js";
@@ -21,15 +22,14 @@ export class TreeBuilder {
 
   build(monitors: MonitorInfo[]): RootContainer {
     const root = new RootContainer(1);
-    let nextId = 2;
 
     for (const monitor of monitors) {
       const workArea = this.toRect(monitor.workArea);
-      const output = new OutputContainer(nextId++, monitor.index, workArea);
+      const output = new OutputContainer(root.nextId(), monitor.index, workArea);
       root.addOutput(output);
 
       const workspace = new WorkspaceContainer(
-        nextId++,
+        root.nextId(),
         `${monitor.index + 1}`,
         monitor.index + 1,
         true
@@ -37,7 +37,7 @@ export class TreeBuilder {
       workspace.rect = this.toRect(workArea);
       output.addChild(workspace);
 
-      const split = new SplitContainer(nextId++);
+      const split = new SplitContainer(root.nextId(), Layout.Alternating);
       split.rect = this.toRect(workArea);
       workspace.addChild(split);
     }

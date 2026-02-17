@@ -202,3 +202,15 @@ export const layoutHandler: CommandHandler = {
     return result(true);
   },
 };
+
+export const alternatingModeHandler: CommandHandler = {
+  action: "alternating-mode",
+  execute: (command, context) => {
+    const mode = command.args[0];
+    if (mode !== "focused" && mode !== "tail") {
+      return result(false, "Unknown alternating mode");
+    }
+    context.config.alternatingMode = mode as "focused" | "tail";
+    return result(true);
+  },
+};

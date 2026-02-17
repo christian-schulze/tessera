@@ -15,7 +15,7 @@ import { IpcServer } from "./ipc/server.js";
 import { buildTesseraService } from "./service/tessera.js";
 import { buildMonitorInfos } from "./monitors.js";
 import { buildDebugPayload } from "./ipc/debug.js";
-import { applyConfig, loadConfig, type TesseraConfig } from "./config.js";
+import { DEFAULT_CONFIG, applyConfig, loadConfig, type TesseraConfig } from "./config.js";
 import { appendLog } from "./logging.js";
 import {
   maybeRebuildTree,
@@ -44,7 +44,7 @@ export default class TesseraExtension extends Extension {
   private lastPollMonitors = 0;
   private lastPollOutputs = 0;
   private pollingActive = false;
-  private config: TesseraConfig = { minTileWidth: 300, minTileHeight: 240 };
+  private config: TesseraConfig = { ...DEFAULT_CONFIG };
 
   private logToFile(message: string): void {
     appendLog(message);

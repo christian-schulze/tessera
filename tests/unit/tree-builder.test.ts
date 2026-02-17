@@ -40,8 +40,8 @@ describe("TreeBuilder", () => {
 
     expect(split0).toBeInstanceOf(SplitContainer);
     expect(split1).toBeInstanceOf(SplitContainer);
-    expect(split0.layout).toBe(Layout.SplitH);
-    expect(split1.layout).toBe(Layout.SplitH);
+    expect(split0.layout).toBe(Layout.Alternating);
+    expect(split1.layout).toBe(Layout.Alternating);
     expect(split0.rect).toEqual(ws0.rect);
     expect(split1.rect).toEqual(ws1.rect);
   });

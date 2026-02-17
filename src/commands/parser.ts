@@ -15,7 +15,7 @@ const tokenize = (input: string): string[] => {
       continue;
     }
 
-    if (!inQuotes && /|\s/.test(char)) {
+    if (!inQuotes && (char === "\x0b" || /\s/.test(char))) {
       if (current.length > 0) {
         tokens.push(current);
         current = "";
