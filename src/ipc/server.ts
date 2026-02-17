@@ -3,6 +3,7 @@ import GLib from "gi://GLib";
 import { decodeRequest, encodeResponse } from "./codec.js";
 import { buildSocketPath } from "./paths.js";
 import type { ConfigParams, IpcRequest, IpcResponse } from "./types.js";
+import { appendLog } from "../logging.js";
 
 type IpcHandlers = {
   execute: (command: string) => unknown;
@@ -70,7 +71,7 @@ export class IpcServer {
     const pid = getPid();
     const socketPath = buildSocketPath(runtimeDir, pid);
 
-    console.log(
+    appendLog(
       `[tessera ipc] starting server pid=${pid} runtimeDir=${runtimeDir} socket=${socketPath}`
     );
 
@@ -89,7 +90,7 @@ export class IpcServer {
       null
     );
     service.connect("incoming", (_service, connection) => {
-      console.log("[tessera ipc] incoming connection");
+      appendLog("[tessera ipc] incoming connection");
       this.handleConnection(connection);
       return true;
     });
@@ -106,7 +107,7 @@ export class IpcServer {
     }
 
     if (this.socketPath) {
-      console.log(`[tessera ipc] stopping server socket=${this.socketPath}`);
+      appendLog(`[tessera ipc] stopping server socket=${this.socketPath}`);
     }
 
     this.service = null;

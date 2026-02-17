@@ -16,22 +16,13 @@ import { buildTesseraService } from "./service/tessera.js";
 import { buildMonitorInfos } from "./monitors.js";
 import { buildDebugPayload } from "./ipc/debug.js";
 import { applyConfig, loadConfig, type TesseraConfig } from "./config.js";
+import { appendLog } from "./logging.js";
 import {
   maybeRebuildTree,
   shouldContinuePolling,
 } from "./extension-rebuild.js";
 
-const appendLog = (path: string, message: string): void => {
-  try {
-    const entry = `[${new Date().toISOString()}] ${message}\n`;
-    const existing = GLib.file_get_contents(path)[1]?.toString() ?? "";
-    GLib.file_set_contents(path, existing + entry);
-  } catch {
-    // ignore logging failures
-  }
-};
-
-appendLog("/tmp/tessera-load.log", "module loaded");
+appendLog("module loaded");
 
 type TesseraGlobal = {
   root: RootContainer;
@@ -56,14 +47,7 @@ export default class TesseraExtension extends Extension {
   private config: TesseraConfig = { minTileWidth: 300, minTileHeight: 240 };
 
   private logToFile(message: string): void {
-    const path = "/tmp/tessera-enable.log";
-    try {
-      const entry = `[${new Date().toISOString()}] ${message}\n`;
-      const existing = GLib.file_get_contents(path)[1]?.toString() ?? "";
-      GLib.file_set_contents(path, existing + entry);
-    } catch {
-      // ignore logging failures
-    }
+    appendLog(message);
   }
 
   private rebuildTree(reason: string, monitorsOverride?: MonitorInfo[]): void {
@@ -146,18 +130,17 @@ export default class TesseraExtension extends Extension {
       this.lastPollMonitors = monitors.length;
       this.lastPollOutputs = outputs;
 
-      appendLog(
-        "/tmp/tessera-monitor.log",
-        `attempt=${this.pollAttempts} monitors=${monitors.length} outputs=${outputs}`
-      );
+        appendLog(
+          `attempt=${this.pollAttempts} monitors=${monitors.length} outputs=${outputs}`
+        );
 
       if (maybeRebuildTree(outputs, monitors.length, () => this.rebuildTree("poll", monitors))) {
-        appendLog("/tmp/tessera-monitor.log", "rebuildTree() called");
+          appendLog("rebuildTree() called");
         this.lastPollOutputs = this.root?.children.length ?? 0;
       }
 
       if (hasWorkAreaMismatch) {
-        appendLog("/tmp/tessera-monitor.log", "work area mismatch -> rebuildTree()");
+          appendLog("work area mismatch -> rebuildTree()");
         this.rebuildTree("workarea", monitors);
       }
 

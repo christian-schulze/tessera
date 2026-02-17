@@ -126,6 +126,9 @@ Tests run with Jasmine via tsx and a config file.
 
 ## Debugging
 - Check `docs/learnings.md` and `docs/decisions.md` before starting.
+- Use `make logs` to tail `~/.local/state/tessera/tessera.log` when investigating extension behavior.
+- `make nested` appends GNOME Shell output to `~/.local/state/tessera/nested-gnome-shell.log`.
+- Use `make logs-nested` to tail `~/.local/state/tessera/nested-gnome-shell.log`.
 
 ## Planning
 - Review `docs/decisions.md` for prior rationale before proposing changes.

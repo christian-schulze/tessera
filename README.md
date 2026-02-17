@@ -53,6 +53,27 @@ bunx tsx scripts/ipc-run.ts execute "splitv; focus right"
 bunx tsx scripts/ipc-run.ts config 300
 ```
 
+## Logs
+
+Tessera writes logs to:
+
+```
+~/.local/state/tessera/tessera.log
+```
+
+Nested GNOME Shell session logs (from `make nested`) are appended to:
+
+```
+~/.local/state/tessera/nested-gnome-shell.log
+```
+
+Tail logs with:
+
+```bash
+make logs
+make logs-nested
+```
+
 ## Configuration
 
 Create `~/.config/tessera/config.js` to override defaults:
