@@ -16,7 +16,7 @@ export interface InsertionContext {
   root: RootContainer;
   parent: Container;
   focused: WindowContainer;
-  mode: "focused" | "append";
+  mode: "focused" | "append" | "tail";
 }
 
 export interface InsertionPlan {
@@ -178,13 +178,32 @@ const alternatingStrategy: LayoutStrategy = {
     return workspaceRect.width / tiledCount < minWidth;
   },
   onWindowAdded: (context) => {
-    if (context.mode !== "focused") {
+    if (context.mode !== "focused" && context.mode !== "tail") {
       return null;
     }
 
+    const targetParent = context.focused.parent;
+    if (!targetParent || targetParent.type !== ContainerType.Split) {
+      return null;
+    }
+
+    const wrapTarget =
+      context.mode === "focused"
+        ? context.focused
+        : targetParent.children[targetParent.children.length - 1];
+
+    if (!wrapTarget) {
+      return null;
+    }
+
+    const wrapLayout =
+      targetParent.layout === Layout.SplitH
+        ? Layout.SplitV
+        : Layout.SplitH;
+
     return {
-      wrapLayout: Layout.SplitV,
-      wrapTarget: context.focused,
+      wrapLayout,
+      wrapTarget,
     };
   },
 };

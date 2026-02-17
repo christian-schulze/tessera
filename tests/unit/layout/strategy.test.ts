@@ -38,7 +38,7 @@ describe("getLayoutStrategy", () => {
     expect(winA.rect.width).toBeLessThan(winB.rect.width + 1);
   });
 
-  it("alternating strategy returns insertion plan in focused mode", () => {
+  it("alternating strategy uses focused target and opposite axis", () => {
     const parent = new SplitContainer(1, Layout.Alternating);
     const split = new SplitContainer(2, Layout.SplitH);
     const focused = new WindowContainer(3, {}, 1, "app", "A");
@@ -53,8 +53,27 @@ describe("getLayoutStrategy", () => {
       mode: "focused",
     });
 
-    expect(plan).toBeTruthy();
-    expect(plan?.wrapLayout).toBe(Layout.SplitV);
     expect(plan?.wrapTarget).toBe(focused);
+    expect(plan?.wrapLayout).toBe(Layout.SplitV);
+  });
+
+  it("alternating strategy uses tail target and opposite axis", () => {
+    const parent = new SplitContainer(1, Layout.Alternating);
+    const split = new SplitContainer(2, Layout.SplitV);
+    const a = new WindowContainer(3, {}, 1, "app", "A");
+    const b = new WindowContainer(4, {}, 2, "app", "B");
+    split.addChild(a);
+    split.addChild(b);
+    parent.addChild(split);
+
+    const plan = getLayoutStrategy(Layout.Alternating).onWindowAdded?.({
+      root: new RootContainer(0),
+      parent,
+      focused: a,
+      mode: "tail",
+    });
+
+    expect(plan?.wrapTarget).toBe(b);
+    expect(plan?.wrapLayout).toBe(Layout.SplitH);
   });
 });
