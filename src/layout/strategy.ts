@@ -20,6 +20,7 @@ export interface InsertionContext {
 }
 
 export interface InsertionPlan {
+  container?: Container;
   wrapTarget?: Container;
   wrapLayout?: Layout;
 }
@@ -202,6 +203,7 @@ const alternatingStrategy: LayoutStrategy = {
         : Layout.SplitH;
 
     return {
+      container: context.parent,
       wrapLayout,
       wrapTarget,
     };
