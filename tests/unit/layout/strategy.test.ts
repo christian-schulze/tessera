@@ -53,6 +53,7 @@ describe("getLayoutStrategy", () => {
       mode: "focused",
     });
 
+    expect(plan).toBeTruthy();
     expect(plan?.wrapTarget).toBe(focused);
     expect(plan?.wrapLayout).toBe(Layout.SplitV);
   });
