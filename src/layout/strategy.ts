@@ -25,6 +25,8 @@ export interface InsertionPlan {
   wrapLayout?: Layout;
 }
 
+export type WindowAddedHandler = (context: InsertionContext) => InsertionPlan | null;
+
 export interface LayoutStrategy {
   id: Layout;
   computeRects: (container: Container) => void;
@@ -41,7 +43,7 @@ export interface LayoutStrategy {
     minTileHeight: number,
     actualRect: Rect
   ) => boolean;
-  onWindowAdded?: (context: InsertionContext) => InsertionPlan | null;
+  onWindowAdded?: WindowAddedHandler;
 }
 
 export const overflowContext: OverflowContext = {};
