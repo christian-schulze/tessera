@@ -4,11 +4,103 @@
 
 **Goal:** Implement cascading alternating layout with configurable nesting mode and command control.
 
-**Architecture:** `Layout.Alternating` computes split orientation by alternating depth (even=horizontal, odd=vertical) while split logic chooses the nesting target based on a new `alternatingMode` config. A new command updates `alternatingMode` at runtime, and IPC config updates persist the setting.
+**Architecture:** `Layout.Alternating` uses an explicit base orientation (horizontal) for its own rect computation. Alternation is implemented by nesting `SplitContainer` children with explicit `Layout.SplitH` or `Layout.SplitV` based on split target rules. The split command chooses a target window (focused or tail) and then wraps that target in a new split container with the opposite axis. A new command updates `alternatingMode` at runtime, and IPC config updates persist the setting.
 
 **Tech Stack:** TypeScript (ESM), Jasmine unit tests, Bun tooling.
 
 ---
+
+**Note on size issues:** When adding windows directly under `Layout.SplitH` or
+`Layout.SplitV`, the 3rd window still fits and the 4th overflows/floats as
+expected. This suggests the minimum size constraints are not the root cause of
+the size issues seen when adding the 3rd window to an alternating layout.
+
+### Behavior scenarios (box drawing)
+
+Notation:
+- Focused tile marked with `*`
+- Last child marked with `+`
+- Labels centered in each tile
+- Splits shown with box-drawing characters
+
+#### Focus mode
+
+1. Start (one window):
+
+```
+┌─────────────┐
+│     A*      │
+└─────────────┘
+```
+
+2. New window (Alternating base axis = SplitH):
+
+```
+┌─────────┬─────────┐
+│    A*   │    B    │
+└─────────┴─────────┘
+```
+
+3. Split in focus mode (focused is in SplitH, so use SplitV):
+
+```
+┌─────────┬─────────┐
+│    A*   │    B    │
+├─────────┤         │
+│    C    │         │
+└─────────┴─────────┘
+```
+
+4. Split again in focus mode (focused in SplitV, so use SplitH):
+
+```
+┌─────┬─────┬─────────┐
+│  A* │  D  │    B    │
+├─────┴─────┤         │
+│     C     │         │
+└───────────┴─────────┘
+```
+
+#### Tail mode
+
+1. Start (one window):
+
+```
+┌─────────────┐
+│     A+      │
+└─────────────┘
+```
+
+2. New window (Alternating base axis = SplitH):
+
+```
+┌─────────┬─────────┐
+│    A    │    B+   │
+└─────────┴─────────┘
+```
+
+3. Split in tail mode (tail is B, last split axis is SplitH, so use SplitV):
+
+```
+┌─────────┬─────────┐
+│    A    │    B    │
+│         ├─────────┤
+│         │    C+   │
+└─────────┴─────────┘
+```
+
+4. Split in tail mode again (last split axis is SplitV, so use SplitH):
+
+```
+┌─────────┬───────────┐
+│    A    │     B     │
+│         ├─────┬─────┤
+│         │  C  │  D+ │
+└─────────┴─────┴─────┘
+```
+
+---
+
 
 ### Task 1: Add alternating mode to config and command
 
@@ -167,7 +259,7 @@ git commit -m "feat(commands): add alternating-mode command"
 
 ---
 
-### Task 3: Implement alternating depth strategy
+### Task 3: Ensure Alternating layout uses horizontal base
 
 **Files:**
 - Modify: `src/layout/strategy.ts`
@@ -175,58 +267,43 @@ git commit -m "feat(commands): add alternating-mode command"
 
 **Step 1: Write the failing test**
 
-Add tests that validate alternating depth orientation. Use a parent with layout Alternating and a child container with layout Alternating to simulate depth 1.
+Add tests that validate Alternating layout uses horizontal base orientation for its own rects.
 
 ```ts
-it("alternating strategy flips orientation by depth", () => {
+it("alternating strategy uses horizontal base", () => {
   const root = new SplitContainer("root", Layout.Alternating);
-  const child = new SplitContainer("child", Layout.Alternating);
   const winA = new WindowContainer("a", {}, 1, "app", "A");
   const winB = new WindowContainer("b", {}, 2, "app", "B");
   root.rect = { x: 0, y: 0, width: 1000, height: 800 };
-  child.rect = root.rect;
-  root.addChild(child);
-  child.addChild(winA);
-  child.addChild(winB);
+  root.addChild(winA);
+  root.addChild(winB);
 
-  getLayoutStrategy(Layout.Alternating).computeRects(child);
+  getLayoutStrategy(Layout.Alternating).computeRects(root);
 
-  expect(winA.rect.height).toBeLessThan(winB.rect.height + 1);
-  expect(winA.rect.width).toBe(1000);
+  expect(winA.rect.height).toBe(800);
+  expect(winB.rect.height).toBe(800);
+  expect(winA.rect.width).toBeLessThan(winB.rect.width + 1);
 });
 ```
 
 **Step 2: Run test to verify it fails**
 
-Run: `bunx tsx ./node_modules/jasmine/bin/jasmine.js --config=tests/jasmine.json --filter="alternating strategy flips"`
+Run: `bunx tsx ./node_modules/jasmine/bin/jasmine.js --config=tests/jasmine.json --filter="alternating strategy uses horizontal base"`
 
-Expected: FAIL (still horizontal).
+Expected: FAIL (Alternating not yet mapped to horizontal split).
 
 **Step 3: Write minimal implementation**
 
-Compute alternating depth by walking parents and counting those with `layout === Layout.Alternating`.
+Treat `Layout.Alternating` like `Layout.SplitH` for rect computation.
 
 ```ts
-const alternatingDepth = (container: Container): number => {
-  let depth = 0;
-  let current = container.parent;
-  while (current) {
-    if (current.layout === Layout.Alternating) {
-      depth += 1;
-    }
-    current = current.parent;
-  }
-  return depth;
-};
-
 // in alternatingStrategy.computeRects
-const isHorizontal = alternatingDepth(container) % 2 === 0;
-computeSplitRects(container, isHorizontal);
+computeSplitRects(container, true);
 ```
 
 **Step 4: Run test to verify it passes**
 
-Run: `bunx tsx ./node_modules/jasmine/bin/jasmine.js --config=tests/jasmine.json --filter="alternating strategy flips"`
+Run: `bunx tsx ./node_modules/jasmine/bin/jasmine.js --config=tests/jasmine.json --filter="alternating strategy uses horizontal base"`
 
 Expected: PASS.
 
@@ -234,12 +311,12 @@ Expected: PASS.
 
 ```bash
 git add src/layout/strategy.ts tests/unit/layout/strategy.test.ts
-git commit -m "feat(layout): alternate split orientation by depth"
+git commit -m "feat(layout): set alternating base orientation"
 ```
 
 ---
 
-### Task 4: Split behavior for alternating mode
+### Task 4: Split behavior for alternating mode (nested splits)
 
 **Files:**
 - Modify: `src/commands/handlers/core.ts`
@@ -247,16 +324,18 @@ git commit -m "feat(layout): alternate split orientation by depth"
 
 **Step 1: Write the failing test**
 
-Add two tests for split targeting.
+Add tests for split targeting and nested split axis selection that match the behavior scenarios above.
 
 ```ts
-it("split in alternating mode targets focused child", () => {
+it("split in alternating focus mode wraps focused with opposite axis", () => {
   const parent = new SplitContainer("parent", Layout.Alternating);
   const focused = new WindowContainer("focused", {}, 1, "app", "Focus");
-  const tail = new WindowContainer("tail", {}, 2, "app", "Tail");
-  parent.addChild(tail);
-  parent.addChild(focused);
-  parent.focusedChild = focused;
+  const sibling = new WindowContainer("sibling", {}, 2, "app", "Sibling");
+  const split = new SplitContainer("split", Layout.SplitH);
+  split.addChild(focused);
+  split.addChild(sibling);
+  focused.focused = true;
+  parent.addChild(split);
 
   const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" };
   splitHandler.execute(makeCommand("splitv"), {
@@ -266,16 +345,19 @@ it("split in alternating mode targets focused child", () => {
     config,
   });
 
-  expect(parent.children[0]).toBe(tail);
-  expect(parent.children[1]).toBeDefined();
+  const wrapped = focused.parent as SplitContainer;
+  expect(wrapped.layout).toBe(Layout.SplitV);
+  expect(wrapped.children).toContain(focused);
 });
 
-it("split in alternating mode targets tail child", () => {
+it("split in alternating tail mode walks to last child and flips axis", () => {
   const parent = new SplitContainer("parent", Layout.Alternating);
   const a = new WindowContainer("a", {}, 1, "app", "A");
   const b = new WindowContainer("b", {}, 2, "app", "B");
-  parent.addChild(a);
-  parent.addChild(b);
+  const split = new SplitContainer("split", Layout.SplitH);
+  split.addChild(a);
+  split.addChild(b);
+  parent.addChild(split);
 
   const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "tail" };
   splitHandler.execute(makeCommand("splitv"), {
@@ -285,7 +367,9 @@ it("split in alternating mode targets tail child", () => {
     config,
   });
 
-  expect(parent.children[parent.children.length - 1]).toBeDefined();
+  const tail = split.children[split.children.length - 1] as WindowContainer;
+  const wrapped = tail.parent as SplitContainer;
+  expect(wrapped.layout).toBe(Layout.SplitV);
 });
 ```
 
@@ -297,18 +381,44 @@ Expected: FAIL.
 
 **Step 3: Write minimal implementation**
 
-In `splitHandler`, when `parent.layout === Layout.Alternating`, select the target child based on `config.alternatingMode` before applying split behavior.
+In `splitHandler`, when `parent.layout === Layout.Alternating`, select the target child based on `config.alternatingMode` and wrap it in a new split container whose axis is the opposite of the relevant split axis (focused parent split in focus mode, or last split axis in tail mode).
 
 ```ts
 const selectAlternatingTarget = (parent: Container, focused: Container | null, mode: "focused" | "tail") => {
-  if (mode === "tail") {
-    return parent.children[parent.children.length - 1] ?? focused;
+  if (mode === "focused") {
+    return parent.focusedChild() ?? focused;
   }
-  return parent.focusedChild ?? focused;
+
+  return parent.children[parent.children.length - 1] ?? focused;
+};
+
+const getOppositeAxis = (layout: Layout): Layout.SplitH | Layout.SplitV => {
+  return layout === Layout.SplitH ? Layout.SplitV : Layout.SplitH;
+};
+
+const findTailSplitAxis = (parent: Container): Layout.SplitH | Layout.SplitV => {
+  let current = parent;
+  let axis: Layout.SplitH | Layout.SplitV = Layout.SplitH;
+  while (current.children.length > 0) {
+    const lastChild = current.children[current.children.length - 1];
+    if (current.type === ContainerType.Split) {
+      axis = current.layout === Layout.SplitV ? Layout.SplitV : Layout.SplitH;
+    }
+    current = lastChild;
+  }
+  return axis;
 };
 ```
 
-Use this target instead of `focused` when deciding where to split.
+Focused mode axis rule:
+- Look at the target's parent split layout (`Layout.SplitH` or `Layout.SplitV`).
+- Create a new split with the opposite axis and wrap the focused target.
+
+Tail mode axis rule:
+- Walk from the alternating parent down the last-child chain, tracking the last split axis.
+- Create a new split with the opposite axis and wrap the tail target.
+
+Then wrap the target with a new `SplitContainer` (opposite axis) and insert the new window as the sibling within that new split.
 
 **Step 4: Run test to verify it passes**
 
@@ -324,25 +434,3 @@ git commit -m "feat(split): honor alternating mode target"
 ```
 
 ---
-
-### Task 5: Full test run and docs update
-
-**Files:**
-- Modify: `AGENTS.md` (optional, document new command if desired)
-
-**Step 1: Run full test suite**
-
-Run: `bun run test`
-
-Expected: PASS.
-
-**Step 2: Update AGENTS (optional)**
-
-Add `alternating-mode focused|tail` to command examples or IPC usage if you want it documented for agents.
-
-**Step 3: Commit**
-
-```bash
-git add AGENTS.md
-git commit -m "docs(agents): document alternating-mode command"
-```
