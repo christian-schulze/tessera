@@ -1,4 +1,5 @@
 .worktrees
+docs/handover/
 node_modules/
 dist/
 *.shell-extension.zip
