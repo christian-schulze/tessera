@@ -102,6 +102,57 @@ Notation:
 ---
 
 
+### Task 0: Register alternating-mode handler
+
+**Files:**
+- Modify: `src/commands/index.ts`
+- Test: `tests/unit/commands/end-to-end.test.ts`
+
+**Step 1: Write the failing test**
+
+Add a test that executes the command via the engine and asserts it is registered.
+
+```ts
+it("registers alternating-mode handler", () => {
+  const engine = buildCommandEngine();
+  registerDefaultHandlers(engine);
+
+  const result = engine.execute(makeCommand("alternating-mode", ["focused"]), {
+    root: new SplitContainer(1) as any,
+    focused: null,
+    adapter: makeAdapter(),
+    config: { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" },
+  });
+
+  expect(result.success).toBeTrue();
+});
+```
+
+**Step 2: Run test to verify it fails**
+
+Run: `bunx tsx ./node_modules/jasmine/bin/jasmine.js --config=tests/jasmine.json --filter="registers alternating-mode handler"`
+
+Expected: FAIL (handler not registered).
+
+**Step 3: Write minimal implementation**
+
+Register `alternatingModeHandler` in `registerDefaultHandlers`.
+
+**Step 4: Run test to verify it passes**
+
+Run: `bunx tsx ./node_modules/jasmine/bin/jasmine.js --config=tests/jasmine.json --filter="registers alternating-mode handler"`
+
+Expected: PASS.
+
+**Step 5: Commit**
+
+```bash
+git add src/commands/index.ts tests/unit/commands/end-to-end.test.ts
+git commit -m "feat(commands): register alternating-mode handler"
+```
+
+---
+
 ### Task 1: Add alternating mode to config and command
 
 **Files:**
@@ -255,6 +306,56 @@ Expected: PASS.
 ```bash
 git add src/commands/handlers/core.ts tests/unit/commands/handlers/core.test.ts
 git commit -m "feat(commands): add alternating-mode command"
+```
+
+---
+
+### Task 2.5: Add monotonic ID helper
+
+**Files:**
+- Modify: `src/tree/root-container.ts`
+- Modify: `src/tree/tree-builder.ts`
+- Modify: `src/window-tracker.ts`
+- Modify (if needed): `src/commands/handlers/core.ts`
+- Test: `tests/unit/tree/root-container.test.ts`
+
+**Step 1: Write the failing test**
+
+Add a test that asserts root IDs are monotonic.
+
+```ts
+it("root issues monotonic ids", () => {
+  const root = new RootContainer(1);
+  const first = root.nextId();
+  const second = root.nextId();
+  expect(second).toBeGreaterThan(first);
+});
+```
+
+**Step 2: Run test to verify it fails**
+
+Run: `bunx tsx ./node_modules/jasmine/bin/jasmine.js --config=tests/jasmine.json --filter="monotonic ids"`
+
+Expected: FAIL (helper missing).
+
+**Step 3: Write minimal implementation**
+
+Add `nextId()` to `RootContainer` (monotonic counter) and use it everywhere new containers are created:
+- `TreeBuilder`
+- `WindowTracker`
+- `splitHandler` wrapping in alternating mode
+
+**Step 4: Run test to verify it passes**
+
+Run: `bunx tsx ./node_modules/jasmine/bin/jasmine.js --config=tests/jasmine.json --filter="monotonic ids"`
+
+Expected: PASS.
+
+**Step 5: Commit**
+
+```bash
+git add src/tree/root-container.ts src/tree/tree-builder.ts src/window-tracker.ts tests/unit/tree/root-container.test.ts
+git commit -m "feat(tree): add monotonic id helper"
 ```
 
 ---
@@ -417,6 +518,9 @@ Focused mode axis rule:
 Tail mode axis rule:
 - Walk from the alternating parent down the last-child chain, tracking the last split axis.
 - Create a new split with the opposite axis and wrap the tail target.
+
+Use helper:
+- `findAlternatingAncestor(container): SplitContainer | null` to detect the alternating parent.
 
 Then wrap the target with a new `SplitContainer` (opposite axis) and insert the new window as the sibling within that new split.
 
