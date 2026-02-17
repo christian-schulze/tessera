@@ -1,8 +1,5 @@
 import type MetaModule from "gi://Meta";
-import type ShellModule from "gi://Shell";
-import type GLibModule from "gi://GLib";
-
-import { reflow } from "./tree/reflow.js";
+import { normalizeTree, reflow } from "./tree/reflow.js";
 import { Container, ContainerType } from "./tree/container.js";
 import { RootContainer } from "./tree/root-container.js";
 import { SplitContainer } from "./tree/split-container.js";
@@ -389,6 +386,15 @@ export class WindowTracker {
     this.layoutRetries.delete(windowId);
 
     if (parent) {
+      const strategy = getLayoutStrategy(parent.layout);
+      const result = strategy.onWindowRemoved?.({
+        root: this.root,
+        parent,
+        removed: container,
+      });
+      if (!result?.handled) {
+        normalizeTree(parent);
+      }
       reflow(parent);
       applyLayout(parent, this.adapter);
     }

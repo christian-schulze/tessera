@@ -19,6 +19,12 @@ export interface InsertionContext {
   mode: "focused" | "append" | "tail";
 }
 
+export interface RemovalContext {
+  root: RootContainer;
+  parent: Container;
+  removed: Container;
+}
+
 export interface InsertionPlan {
   container?: Container;
   wrapTarget?: Container;
@@ -44,6 +50,7 @@ export interface LayoutStrategy {
     actualRect: Rect
   ) => boolean;
   onWindowAdded?: WindowAddedHandler;
+  onWindowRemoved?: (context: RemovalContext) => { handled?: boolean } | null;
 }
 
 export const overflowContext: OverflowContext = {};

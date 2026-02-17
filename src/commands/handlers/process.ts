@@ -1,5 +1,4 @@
 import type { CommandHandler, CommandResult } from "../types.js";
-import type { CommandContext } from "../context.js";
 import { WindowContainer } from "../../tree/window-container.js";
 
 const result = (success: boolean, message?: string): CommandResult => ({

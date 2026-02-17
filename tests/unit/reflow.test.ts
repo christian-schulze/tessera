@@ -1,5 +1,6 @@
 import { reflow } from "../../src/tree/reflow.ts";
 import { SplitContainer } from "../../src/tree/split-container.ts";
+import { WorkspaceContainer } from "../../src/tree/workspace-container.ts";
 import { Container, ContainerType, Layout } from "../../src/tree/container.ts";
 
 let nextId = 1;
@@ -126,5 +127,44 @@ describe("reflow", () => {
     expect(a.rect.width).toBe(495);
     expect(b.rect.width).toBe(495);
     expect(b.rect.x).toBe(505);
+  });
+
+  it("normalizes empty split chains after removal", async () => {
+    const module = await import("../../src/tree/reflow.ts");
+
+    const workspace = new WorkspaceContainer(1, "1", 1, true);
+    const alternating = new SplitContainer(2, Layout.Alternating);
+    workspace.addChild(alternating);
+    const splitH = new SplitContainer(3, Layout.SplitH);
+    alternating.addChild(splitH);
+    const window = makeWindow();
+    const emptySplit = new SplitContainer(5, Layout.SplitV);
+    splitH.addChild(window);
+    splitH.addChild(emptySplit);
+
+    module.normalizeTree(splitH);
+
+    expect(workspace.children.length).toBe(1);
+    expect(workspace.children[0]).toBe(alternating);
+    expect(alternating.children.length).toBe(1);
+    expect(alternating.children[0]).toBe(window);
+  });
+
+  it("keeps workspace split when all tiles removed", async () => {
+    const module = await import("../../src/tree/reflow.ts");
+
+    const workspace = new WorkspaceContainer(1, "1", 1, true);
+    const alternating = new SplitContainer(2, Layout.Alternating);
+    workspace.addChild(alternating);
+    const splitH = new SplitContainer(3, Layout.SplitH);
+    const emptySplit = new SplitContainer(4, Layout.SplitV);
+    alternating.addChild(splitH);
+    splitH.addChild(emptySplit);
+
+    module.normalizeTree(splitH);
+
+    expect(workspace.children.length).toBe(1);
+    expect(workspace.children[0]).toBe(alternating);
+    expect(alternating.children.length).toBe(0);
   });
 });
