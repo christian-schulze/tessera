@@ -1,6 +1,13 @@
 import { CommandEngine } from "./engine.js";
 import type { CommandHandler } from "./types.js";
-import { focusHandler, layoutHandler, moveHandler, resizeHandler, splitHandler } from "./handlers/core.js";
+import {
+  alternatingModeHandler,
+  focusHandler,
+  layoutHandler,
+  moveHandler,
+  resizeHandler,
+  splitHandler,
+} from "./handlers/core.js";
 import {
   floatingHandler,
   fullscreenHandler,
@@ -24,6 +31,7 @@ export const registerDefaultHandlers = (engine: CommandEngine): void => {
   engine.register(resizeHandler);
   engine.register(layoutHandler);
   engine.register(splitHandler);
+  engine.register(alternatingModeHandler);
   engine.register(aliasHandler("splitv", splitHandler));
   engine.register(aliasHandler("splith", splitHandler));
   engine.register(workspaceHandler);

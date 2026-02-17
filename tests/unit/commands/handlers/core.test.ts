@@ -3,7 +3,7 @@ import { WindowContainer } from "../../../../src/tree/window-container.ts";
 import { SplitContainer } from "../../../../src/tree/split-container.ts";
 import { RootContainer } from "../../../../src/tree/root-container.ts";
 import { Layout } from "../../../../src/tree/container.ts";
-import { insertWindowWithStrategy } from "../../../../src/window-tracker.ts";
+import { insertWindowWithStrategy } from "../../../../src/window-insertion.ts";
 import {
   alternatingModeHandler,
   focusHandler,
@@ -219,8 +219,8 @@ describe("Core command handlers", () => {
   });
 
   it("split sets parent layout to splitv", () => {
-    const window = new WindowContainer("win", {}, 1, "app", "title");
-    const parent = new SplitContainer("parent", Layout.SplitH);
+    const window = new WindowContainer(1, {}, 1, "app", "title");
+    const parent = new SplitContainer(2, Layout.SplitH);
     parent.addChild(window);
 
     const result = splitHandler.execute(makeCommand("splitv"), {
@@ -240,7 +240,7 @@ describe("Core command handlers", () => {
     parent.addChild(window);
 
     const adapter = makeAdapter();
-    const config = { minTileWidth: 300, minTileHeight: 240 };
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
 
     const result = layoutHandler.execute(makeCommand("layout", ["stacking"]), {
       root: parent as any,

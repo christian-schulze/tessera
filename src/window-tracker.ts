@@ -3,7 +3,7 @@ import type ShellModule from "gi://Shell";
 import type GLibModule from "gi://GLib";
 
 import { reflow } from "./tree/reflow.js";
-import { Container, ContainerType, Layout } from "./tree/container.js";
+import { Container, ContainerType } from "./tree/container.js";
 import { RootContainer } from "./tree/root-container.js";
 import { SplitContainer } from "./tree/split-container.js";
 import { WorkspaceContainer } from "./tree/workspace-container.js";
@@ -14,6 +14,7 @@ import type { TesseraConfig } from "./config.js";
 import { updateFocusedWindow } from "./window-tracker-focus.js";
 import { getLayoutStrategy } from "./layout/strategy.js";
 import { appendLog } from "./logging.js";
+import { insertWindowWithStrategy } from "./window-insertion.js";
 
 type GiModules = {
   Shell?: typeof import("gi://Shell").default;
@@ -41,63 +42,6 @@ const findFocusedWindow = (container: Container): WindowContainer | null => {
 
 type MetaWindow = MetaModule.Window;
 
-export const insertWindowWithStrategy = (options: {
-  root: RootContainer;
-  split: SplitContainer;
-  container: WindowContainer;
-  focused: WindowContainer;
-  mode: "focused" | "append" | "tail";
-}): void => {
-  const { root, split, container, focused, mode } = options;
-  const strategy = getLayoutStrategy(split.layout);
-  appendLog(
-    `[tessera tracker] onWindowAdded layout=${split.layout} mode=${mode} targetId=${focused.id}`
-  );
-  const plan = strategy.onWindowAdded?.({
-    root,
-    parent: split,
-    focused,
-    mode,
-  });
-
-  if (!plan) {
-    appendLog(`[tessera tracker] add-window fallback reason=no plan`);
-    split.addChild(container);
-    return;
-  }
-
-  if (!plan.wrapTarget) {
-    appendLog(`[tessera tracker] add-window fallback reason=no target`);
-    split.addChild(container);
-    return;
-  }
-
-  const wrapTarget = plan.wrapTarget;
-  const wrapLayout = plan.wrapLayout ?? split.layout;
-  const targetParent = wrapTarget.parent;
-  if (!targetParent || targetParent.type !== ContainerType.Split) {
-    appendLog(`[tessera tracker] add-window fallback reason=no parent split`);
-    split.addChild(container);
-    return;
-  }
-
-  const index = targetParent.children.indexOf(wrapTarget);
-  if (index === -1) {
-    appendLog(`[tessera tracker] add-window fallback reason=no parent split`);
-    split.addChild(container);
-    return;
-  }
-
-  const newSplit = new SplitContainer(root.nextId(), wrapLayout);
-  targetParent.children[index] = newSplit;
-  newSplit.parent = targetParent;
-  newSplit.addChild(wrapTarget);
-  newSplit.addChild(container);
-  const axis = wrapLayout === Layout.SplitH ? "horizontal" : "vertical";
-  appendLog(
-    `[tessera tracker] add-window wrap newSplitId=${newSplit.id} axis=${axis} wrapTargetId=${wrapTarget.id}`
-  );
-};
 
 export class WindowTracker {
   private root: RootContainer;
@@ -260,13 +204,14 @@ export class WindowTracker {
     }
 
     const focused = findFocusedWindow(this.root) ?? container;
-    const mode = this.getConfig().alternatingMode;
+    const mode = "focused";
     insertWindowWithStrategy({
       root: this.root,
       split,
       container,
       focused,
       mode,
+      log: appendLog,
     });
 
     this.windowMap.set(windowId, container);

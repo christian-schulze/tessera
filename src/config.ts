@@ -1,11 +1,15 @@
+export type AlternatingMode = "focused" | "tail";
+
 export type TesseraConfig = {
   minTileWidth: number;
   minTileHeight: number;
+  alternatingMode: AlternatingMode;
 };
 
 export const DEFAULT_CONFIG: TesseraConfig = {
   minTileWidth: 300,
   minTileHeight: 240,
+  alternatingMode: "focused",
 };
 
 const normalizeMinTileWidth = (value: unknown): number | null => {
@@ -32,6 +36,14 @@ const normalizeMinTileHeight = (value: unknown): number | null => {
   return Math.floor(value);
 };
 
+const normalizeAlternatingMode = (value: unknown): AlternatingMode | null => {
+  if (value === "focused" || value === "tail") {
+    return value;
+  }
+
+  return null;
+};
+
 export const applyConfig = (
   target: TesseraConfig,
   updates: unknown
@@ -40,7 +52,11 @@ export const applyConfig = (
     return target;
   }
 
-  const candidate = updates as { minTileWidth?: unknown; minTileHeight?: unknown };
+  const candidate = updates as {
+    minTileWidth?: unknown;
+    minTileHeight?: unknown;
+    alternatingMode?: unknown;
+  };
   const minTileWidth = normalizeMinTileWidth(candidate.minTileWidth);
   if (minTileWidth !== null) {
     target.minTileWidth = minTileWidth;
@@ -49,6 +65,11 @@ export const applyConfig = (
   const minTileHeight = normalizeMinTileHeight(candidate.minTileHeight);
   if (minTileHeight !== null) {
     target.minTileHeight = minTileHeight;
+  }
+
+  const alternatingMode = normalizeAlternatingMode(candidate.alternatingMode);
+  if (alternatingMode !== null) {
+    target.alternatingMode = alternatingMode;
   }
 
   return target;
