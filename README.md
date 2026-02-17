@@ -49,9 +49,20 @@ Then use the IPC CLI:
 
 ```bash
 bunx tsx scripts/ipc-run.ts tree
+bunx tsx scripts/ipc-run.ts debug
 bunx tsx scripts/ipc-run.ts execute "splitv; focus right"
 bunx tsx scripts/ipc-run.ts config 300
 ```
+
+Or use the Make targets:
+
+```bash
+make ipc-tree
+make ipc-debug
+```
+
+These commands work from your normal shell as long as a Tessera IPC socket is active
+(normal session or nested shell).
 
 ## Logs
 

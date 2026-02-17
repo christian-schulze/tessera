@@ -3,7 +3,7 @@ INSTALL_DIR = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 REPO_DIR = $(CURDIR)
 BUILD_DIR = $(CURDIR)/dist
 
-.PHONY: help build install uninstall enable disable restart nested looking-glass lint test check logs logs-nested clean
+.PHONY: help build install uninstall enable disable restart nested looking-glass lint test check logs logs-nested ipc-tree ipc-debug clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -68,6 +68,12 @@ logs: ## Tail Tessera logs
 logs-nested: ## Tail nested GNOME Shell logs
 	@mkdir -p "$(HOME)/.local/state/tessera" && touch "$(HOME)/.local/state/tessera/nested-gnome-shell.log"
 	@tail -f "$(HOME)/.local/state/tessera/nested-gnome-shell.log"
+
+ipc-tree: ## Fetch container tree via IPC
+	bunx tsx scripts/ipc-run.ts tree
+
+ipc-debug: ## Fetch debug info via IPC
+	bunx tsx scripts/ipc-run.ts debug
 
 lint: ## Run ESLint on source files
 	bunx eslint src/

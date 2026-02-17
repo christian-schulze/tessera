@@ -47,6 +47,11 @@ Keep changes minimal, match existing conventions, and prefer focused diffs.
 ### Looking Glass (Debug)
 - `make looking-glass`
 
+### IPC Debug Helpers
+- `make ipc-tree`
+- `make ipc-debug`
+  - Requires an active Tessera IPC socket (normal or nested session).
+
 ## Running a Single Test
 
 Tests run with Jasmine via tsx and a config file.
@@ -129,6 +134,7 @@ Tests run with Jasmine via tsx and a config file.
 - Use `make logs` to tail `~/.local/state/tessera/tessera.log` when investigating extension behavior.
 - `make nested` appends GNOME Shell output to `~/.local/state/tessera/nested-gnome-shell.log`.
 - Use `make logs-nested` to tail `~/.local/state/tessera/nested-gnome-shell.log`.
+- Use `make ipc-tree` or `make ipc-debug` to query IPC state.
 
 ## Planning
 - Review `docs/decisions.md` for prior rationale before proposing changes.
