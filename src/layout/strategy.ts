@@ -57,6 +57,47 @@ const layoutChildrenFor = (container: Container): Container[] => {
   });
 };
 
+const isDescendantOf = (ancestor: Container, node: Container): boolean => {
+  let current: Container | null = node;
+
+  while (current) {
+    if (current === ancestor) {
+      return true;
+    }
+    current = current.parent;
+  }
+
+  return false;
+};
+
+const tailPlanFor = (parent: Container): Pick<InsertionPlan, "wrapTarget" | "wrapLayout"> | null => {
+  if (parent.children.length === 0) {
+    return null;
+  }
+
+  let current: Container = parent;
+  let lastSplitLayout: Layout | null = null;
+
+  while (current.children.length > 0) {
+    if (current.type === ContainerType.Split) {
+      if (current.layout === Layout.SplitH || current.layout === Layout.SplitV) {
+        lastSplitLayout = current.layout;
+      }
+    }
+
+    current = current.children[current.children.length - 1];
+  }
+
+  if (!lastSplitLayout) {
+    return null;
+  }
+
+  const wrapLayout =
+    lastSplitLayout === Layout.SplitH ? Layout.SplitV : Layout.SplitH;
+
+  return { wrapTarget: current, wrapLayout };
+};
+
 const computeSplitRects = (container: Container, isHorizontal: boolean): void => {
   const layoutChildren = layoutChildrenFor(container);
   if (layoutChildren.length === 0) {
@@ -185,29 +226,44 @@ const alternatingStrategy: LayoutStrategy = {
       return null;
     }
 
+    if (context.mode === "focused" && !isDescendantOf(context.parent, context.focused)) {
+      const tailPlan = tailPlanFor(context.parent);
+      if (!tailPlan) {
+        return null;
+      }
+
+      return {
+        container: context.parent,
+        wrapLayout: tailPlan.wrapLayout,
+        wrapTarget: tailPlan.wrapTarget,
+      };
+    }
+
+    if (context.mode === "tail") {
+      const tailPlan = tailPlanFor(context.parent);
+      if (!tailPlan) {
+        return null;
+      }
+
+      return {
+        container: context.parent,
+        wrapLayout: tailPlan.wrapLayout,
+        wrapTarget: tailPlan.wrapTarget,
+      };
+    }
+
     const targetParent = context.focused.parent;
     if (!targetParent || targetParent.type !== ContainerType.Split) {
       return null;
     }
 
-    const wrapTarget =
-      context.mode === "focused"
-        ? context.focused
-        : targetParent.children[targetParent.children.length - 1];
-
-    if (!wrapTarget) {
-      return null;
-    }
-
     const wrapLayout =
-      targetParent.layout === Layout.SplitH
-        ? Layout.SplitV
-        : Layout.SplitH;
+      targetParent.layout === Layout.SplitH ? Layout.SplitV : Layout.SplitH;
 
     return {
       container: context.parent,
       wrapLayout,
-      wrapTarget,
+      wrapTarget: context.focused,
     };
   },
 };

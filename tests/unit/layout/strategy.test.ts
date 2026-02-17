@@ -77,4 +77,29 @@ describe("getLayoutStrategy", () => {
     expect(plan?.wrapTarget).toBe(b);
     expect(plan?.wrapLayout).toBe(Layout.SplitH);
   });
+
+  it("alternating strategy tail mode uses parent tail even if focus is elsewhere", () => {
+    const parent = new SplitContainer(1, Layout.Alternating);
+    const left = new SplitContainer(2, Layout.SplitH);
+    const right = new SplitContainer(3, Layout.SplitV);
+    const focused = new WindowContainer(4, {}, 1, "app", "Focus");
+    const tailA = new WindowContainer(5, {}, 2, "app", "TailA");
+    const tailB = new WindowContainer(6, {}, 3, "app", "TailB");
+
+    left.addChild(focused);
+    right.addChild(tailA);
+    right.addChild(tailB);
+    parent.addChild(left);
+    parent.addChild(right);
+
+    const plan = getLayoutStrategy(Layout.Alternating).onWindowAdded?.({
+      root: new RootContainer(0),
+      parent,
+      focused,
+      mode: "tail",
+    });
+
+    expect(plan?.wrapTarget).toBe(tailB);
+    expect(plan?.wrapLayout).toBe(Layout.SplitH);
+  });
 });
