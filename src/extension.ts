@@ -191,7 +191,7 @@ export default class TesseraExtension extends Extension {
           (window as Meta.Window).activate(global.get_current_time()),
         moveResize: (window: unknown, rect) =>
           (window as Meta.Window).move_resize_frame(
-            true,
+            false,
             rect.x,
             rect.y,
             rect.width,

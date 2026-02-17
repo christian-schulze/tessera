@@ -124,5 +124,11 @@ Tests run with Jasmine via tsx and a config file.
 - Prefer small, incremental edits to minimize risk in GNOME Shell.
 - If adding new IPC handlers, update types and tests together.
 
+## Debugging
+- Check `docs/learnings.md` and `docs/decisions.md` before starting.
+
+## Planning
+- Review `docs/decisions.md` for prior rationale before proposing changes.
+
 ## No Cursor/Copilot Rules Found
 - `.cursor/rules/`, `.cursorrules`, and `.github/copilot-instructions.md` not present.
