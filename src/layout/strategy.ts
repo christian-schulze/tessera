@@ -1,5 +1,6 @@
 import type { Container, Rect } from "../tree/container.js";
 import { ContainerType, Layout } from "../tree/container.js";
+import type { RootContainer } from "../tree/root-container.js";
 import type { WindowContainer } from "../tree/window-container.js";
 
 export interface OverflowContext {
@@ -9,6 +10,18 @@ export interface OverflowContext {
     inner?: number;
     outer?: number;
   };
+}
+
+export interface InsertionContext {
+  root: RootContainer;
+  parent: Container;
+  focused: WindowContainer;
+  mode: "focused" | "append";
+}
+
+export interface InsertionPlan {
+  wrapTarget?: Container;
+  wrapLayout?: Layout;
 }
 
 export interface LayoutStrategy {
@@ -27,6 +40,7 @@ export interface LayoutStrategy {
     minTileHeight: number,
     actualRect: Rect
   ) => boolean;
+  onWindowAdded?: (context: InsertionContext) => InsertionPlan | null;
 }
 
 export const overflowContext: OverflowContext = {};
@@ -162,6 +176,16 @@ const alternatingStrategy: LayoutStrategy = {
   ) => {
     const minWidth = Math.max(minTileWidth, actualRect.width);
     return workspaceRect.width / tiledCount < minWidth;
+  },
+  onWindowAdded: (context) => {
+    if (context.mode !== "focused") {
+      return null;
+    }
+
+    return {
+      wrapLayout: Layout.SplitV,
+      wrapTarget: context.focused,
+    };
   },
 };
 

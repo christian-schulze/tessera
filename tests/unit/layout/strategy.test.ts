@@ -1,5 +1,8 @@
 import { getLayoutStrategy } from "../../../src/layout/strategy.ts";
 import { Layout } from "../../../src/tree/container.ts";
+import { RootContainer } from "../../../src/tree/root-container.ts";
+import { SplitContainer } from "../../../src/tree/split-container.ts";
+import { WindowContainer } from "../../../src/tree/window-container.ts";
 
 describe("getLayoutStrategy", () => {
   it("returns SplitH strategy for SplitH layout", () => {
@@ -18,5 +21,40 @@ describe("getLayoutStrategy", () => {
     const strategy = getLayoutStrategy(Layout.Alternating);
 
     expect(strategy.id).toBe(Layout.Alternating);
+  });
+
+  it("alternating strategy uses horizontal base", () => {
+    const root = new SplitContainer(1, Layout.Alternating);
+    const winA = new WindowContainer(2, {}, 1, "app", "A");
+    const winB = new WindowContainer(3, {}, 2, "app", "B");
+    root.rect = { x: 0, y: 0, width: 1000, height: 800 };
+    root.addChild(winA);
+    root.addChild(winB);
+
+    getLayoutStrategy(Layout.Alternating).computeRects(root);
+
+    expect(winA.rect.height).toBe(800);
+    expect(winB.rect.height).toBe(800);
+    expect(winA.rect.width).toBeLessThan(winB.rect.width + 1);
+  });
+
+  it("alternating strategy returns insertion plan in focused mode", () => {
+    const parent = new SplitContainer(1, Layout.Alternating);
+    const split = new SplitContainer(2, Layout.SplitH);
+    const focused = new WindowContainer(3, {}, 1, "app", "A");
+    focused.focused = true;
+    split.addChild(focused);
+    parent.addChild(split);
+
+    const plan = getLayoutStrategy(Layout.Alternating).onWindowAdded?.({
+      root: new RootContainer(0),
+      parent,
+      focused,
+      mode: "focused",
+    });
+
+    expect(plan).toBeTruthy();
+    expect(plan?.wrapLayout).toBe(Layout.SplitV);
+    expect(plan?.wrapTarget).toBe(focused);
   });
 });
