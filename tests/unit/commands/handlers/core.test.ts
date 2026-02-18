@@ -1,6 +1,8 @@
 import type { Command, CommandHandler } from "../../../../src/commands/types.ts";
 import { WindowContainer } from "../../../../src/tree/window-container.ts";
 import { SplitContainer } from "../../../../src/tree/split-container.ts";
+import { OutputContainer } from "../../../../src/tree/output-container.ts";
+import { WorkspaceContainer } from "../../../../src/tree/workspace-container.ts";
 import { RootContainer } from "../../../../src/tree/root-container.ts";
 import { Layout } from "../../../../src/tree/container.ts";
 import { insertWindowWithStrategy } from "../../../../src/window-insertion.ts";
@@ -31,13 +33,15 @@ describe("Core command handlers", () => {
     setFloating: () => {},
     close: () => {},
     exec: () => {},
+    changeWorkspace: () => {},
+    moveToWorkspace: () => {},
   });
 
   it("focus activates the focused window", () => {
     const window = {};
-    const focused = new WindowContainer("win", window, 1, "app", "title");
+    const focused = new WindowContainer(1, window, 1, "app", "title");
     const adapter = makeAdapter();
-    const config = { minTileWidth: 300, minTileHeight: 240 };
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
 
     const result = focusHandler.execute(makeCommand("focus"), {
       root: focused as any,
@@ -50,15 +54,81 @@ describe("Core command handlers", () => {
     expect(adapter.activated).toEqual([window]);
   });
 
+  it("focus left activates the sibling window", () => {
+    const leftWindow = new WindowContainer(1, {}, 1, "app", "left");
+    const rightWindow = new WindowContainer(2, {}, 2, "app", "right");
+    const parent = new SplitContainer(3, Layout.SplitH);
+    parent.rect = { x: 0, y: 0, width: 200, height: 100 };
+    const root = new RootContainer(4);
+    root.addChild(parent);
+    parent.addChild(leftWindow);
+    parent.addChild(rightWindow);
+    rightWindow.focused = true;
+
+    leftWindow.rect = { x: 0, y: 0, width: 100, height: 100 };
+    rightWindow.rect = { x: 100, y: 0, width: 100, height: 100 };
+
+    const adapter = makeAdapter();
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
+
+    const result = focusHandler.execute(makeCommand("focus", ["left"]), {
+      root: root as any,
+      focused: rightWindow,
+      adapter,
+      config,
+    });
+
+    expect(result.success).toBeTrue();
+    expect(adapter.activated).toEqual([leftWindow.window]);
+    expect(leftWindow.focused).toBeTrue();
+    expect(rightWindow.focused).toBeFalse();
+  });
+
+  it("focus left moves to the closest window by position", () => {
+    const root = new RootContainer(1);
+    const parent = new SplitContainer(2, Layout.SplitH);
+    root.addChild(parent);
+
+    const leftWindow = new WindowContainer(3, {}, 1, "app", "left");
+    leftWindow.rect = { x: 0, y: 0, width: 100, height: 100 };
+    const midWindow = new WindowContainer(4, {}, 2, "app", "mid");
+    midWindow.rect = { x: 200, y: 0, width: 100, height: 100 };
+    const rightWindow = new WindowContainer(5, {}, 3, "app", "right");
+    rightWindow.rect = { x: 400, y: 0, width: 100, height: 100 };
+    rightWindow.focused = true;
+
+    parent.addChild(leftWindow);
+    parent.addChild(midWindow);
+    parent.addChild(rightWindow);
+
+    const adapter = makeAdapter();
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
+
+    const result = focusHandler.execute(makeCommand("focus", ["left"]), {
+      root: root as any,
+      focused: rightWindow,
+      adapter,
+      config,
+    });
+
+    expect(result.success).toBeTrue();
+    expect(adapter.activated).toEqual([midWindow.window]);
+    expect(midWindow.focused).toBeTrue();
+    expect(rightWindow.focused).toBeFalse();
+  });
+
   it("move reorders a focused window within its parent", () => {
-    const windowA = new WindowContainer("a", {}, 1, "app", "A");
-    const windowB = new WindowContainer("b", {}, 2, "app", "B");
-    const split = new SplitContainer("split");
+    const windowA = new WindowContainer(1, {}, 1, "app", "A");
+    const windowB = new WindowContainer(2, {}, 2, "app", "B");
+    const split = new SplitContainer(3, Layout.SplitH);
     split.addChild(windowA);
     split.addChild(windowB);
 
     const adapter = makeAdapter();
-    const config = { minTileWidth: 300, minTileHeight: 240 };
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
+
+    windowB.rect = { x: 100, y: 0, width: 100, height: 100 };
+    windowA.rect = { x: 0, y: 0, width: 100, height: 100 };
 
     const result = moveHandler.execute(makeCommand("move", ["left"]), {
       root: split as any,
@@ -73,18 +143,141 @@ describe("Core command handlers", () => {
     expect(adapter.moveResize).toHaveBeenCalled();
   });
 
+  it("move container to workspace uses adapter", () => {
+    const window = {};
+    const focused = new WindowContainer(1, window, 1, "app", "title");
+    const adapter = {
+      activated: [] as unknown[],
+      movedTo: [] as Array<{ window: unknown; index: number; focus: boolean }>,
+      activate(target: unknown) {
+        this.activated.push(target);
+      },
+      moveResize: jasmine.createSpy("moveResize"),
+      setFullscreen: () => {},
+      setFloating: () => {},
+      close: () => {},
+      exec: () => {},
+      changeWorkspace: () => {},
+      moveToWorkspace(window: unknown, index: number, focus: boolean) {
+        this.movedTo.push({ window, index, focus });
+      },
+    };
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
+
+    const result = moveHandler.execute(
+      makeCommand("move", ["container", "to", "workspace", "2"]),
+      {
+        root: focused as any,
+        focused,
+        adapter,
+        config,
+      }
+    );
+
+    expect(result.success).toBeTrue();
+    expect(adapter.movedTo).toEqual([{ window, index: 1, focus: true }]);
+  });
+
+  it("move container to workspace updates tree", () => {
+    const root = new RootContainer(1);
+    const output = new OutputContainer(2, 0, { x: 0, y: 0, width: 200, height: 100 });
+    root.addChild(output);
+
+    const workspaceA = new WorkspaceContainer(3, "1", 1, true);
+    const workspaceB = new WorkspaceContainer(4, "2", 2, false);
+    output.addChild(workspaceA);
+    output.addChild(workspaceB);
+
+    const splitA = new SplitContainer(5, Layout.SplitH);
+    splitA.rect = { x: 0, y: 0, width: 200, height: 100 };
+    const splitB = new SplitContainer(6, Layout.SplitH);
+    splitB.rect = { x: 0, y: 0, width: 200, height: 100 };
+    workspaceA.addChild(splitA);
+    workspaceB.addChild(splitB);
+
+    const window = {};
+    const focused = new WindowContainer(7, window, 1, "app", "title");
+    focused.rect = { x: 0, y: 0, width: 100, height: 100 };
+    splitA.addChild(focused);
+
+    const adapter = {
+      activated: [] as unknown[],
+      movedTo: [] as Array<{ window: unknown; index: number; focus: boolean }>,
+      activate(target: unknown) {
+        this.activated.push(target);
+      },
+      moveResize: jasmine.createSpy("moveResize"),
+      setFullscreen: () => {},
+      setFloating: () => {},
+      close: () => {},
+      exec: () => {},
+      changeWorkspace: () => {},
+      moveToWorkspace(window: unknown, index: number, focus: boolean) {
+        this.movedTo.push({ window, index, focus });
+      },
+    };
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
+
+    const result = moveHandler.execute(
+      makeCommand("move", ["container", "to", "workspace", "2"]),
+      {
+        root: root as any,
+        focused,
+        adapter,
+        config,
+      }
+    );
+
+    expect(result.success).toBeTrue();
+    expect(splitA.children.includes(focused)).toBeFalse();
+    expect(splitB.children.includes(focused)).toBeTrue();
+    expect(focused.parent).toBe(splitB);
+    expect(workspaceB.lastFocusedWindowId).toBe(1);
+  });
+
+  it("move swaps with the nearest window in direction", () => {
+    const root = new RootContainer(1);
+    const parent = new SplitContainer(2, Layout.SplitH);
+    root.addChild(parent);
+
+    const leftWindow = new WindowContainer(3, {}, 1, "app", "left");
+    leftWindow.rect = { x: 0, y: 0, width: 100, height: 100 };
+    const midWindow = new WindowContainer(4, {}, 2, "app", "mid");
+    midWindow.rect = { x: 200, y: 0, width: 100, height: 100 };
+    const rightWindow = new WindowContainer(5, {}, 3, "app", "right");
+    rightWindow.rect = { x: 400, y: 0, width: 100, height: 100 };
+
+    parent.addChild(leftWindow);
+    parent.addChild(midWindow);
+    parent.addChild(rightWindow);
+
+    const adapter = makeAdapter();
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
+
+    const result = moveHandler.execute(makeCommand("move", ["left"]), {
+      root: root as any,
+      focused: rightWindow,
+      adapter,
+      config,
+    });
+
+    expect(result.success).toBeTrue();
+    expect(parent.children[1]).toBe(rightWindow);
+    expect(parent.children[2]).toBe(midWindow);
+  });
+
   it("resize adjusts focused window proportion", () => {
-    const window = new WindowContainer("win", {}, 1, "app", "title");
+    const window = new WindowContainer(1, {}, 1, "app", "title");
     window.proportion = 1;
 
-    const parent = new SplitContainer("parent");
+    const parent = new SplitContainer(2, Layout.SplitH);
     parent.rect = { x: 0, y: 0, width: 1000, height: 800 };
-    const sibling = new WindowContainer("sib", {}, 2, "app", "sibling");
+    const sibling = new WindowContainer(3, {}, 2, "app", "sibling");
     sibling.proportion = 1;
     parent.addChild(window);
     parent.addChild(sibling);
     const adapter = makeAdapter();
-    const config = { minTileWidth: 300, minTileHeight: 240 };
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
 
     const result = resizeHandler.execute(
       makeCommand("resize", ["grow", "width", "10"]),
@@ -102,17 +295,17 @@ describe("Core command handlers", () => {
   });
 
   it("resize uses ppt units when provided", () => {
-    const window = new WindowContainer("win", {}, 1, "app", "title");
+    const window = new WindowContainer(1, {}, 1, "app", "title");
     window.proportion = 1;
 
-    const parent = new SplitContainer("parent");
+    const parent = new SplitContainer(2, Layout.SplitH);
     parent.rect = { x: 0, y: 0, width: 1000, height: 800 };
-    const sibling = new WindowContainer("sib", {}, 2, "app", "sibling");
+    const sibling = new WindowContainer(3, {}, 2, "app", "sibling");
     sibling.proportion = 1;
     parent.addChild(window);
     parent.addChild(sibling);
     const adapter = makeAdapter();
-    const config = { minTileWidth: 300, minTileHeight: 240 };
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
 
     const result = resizeHandler.execute(
       makeCommand("resize", ["grow", "width", "10", "ppt"]),
@@ -130,17 +323,17 @@ describe("Core command handlers", () => {
   });
 
   it("resize set uses absolute sizes", () => {
-    const window = new WindowContainer("win", {}, 1, "app", "title");
+    const window = new WindowContainer(1, {}, 1, "app", "title");
     window.proportion = 1;
 
-    const parent = new SplitContainer("parent");
+    const parent = new SplitContainer(2, Layout.SplitH);
     parent.rect = { x: 0, y: 0, width: 1000, height: 800 };
-    const sibling = new WindowContainer("sib", {}, 2, "app", "sibling");
+    const sibling = new WindowContainer(3, {}, 2, "app", "sibling");
     sibling.proportion = 1;
     parent.addChild(window);
     parent.addChild(sibling);
     const adapter = makeAdapter();
-    const config = { minTileWidth: 300, minTileHeight: 240 };
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
 
     const result = resizeHandler.execute(
       makeCommand("resize", ["set", "width", "60", "ppt"]),
@@ -158,10 +351,10 @@ describe("Core command handlers", () => {
   });
 
   it("resize applies sequential ppt adjustments against parent size", () => {
-    const window = new WindowContainer("win", {}, 1, "app", "title");
+    const window = new WindowContainer(1, {}, 1, "app", "title");
     window.proportion = 1;
 
-    const parent = new SplitContainer("parent");
+    const parent = new SplitContainer(2, Layout.SplitH);
     parent.rect = { x: 0, y: 0, width: 1000, height: 800 };
     const sibling = new WindowContainer("sib", {}, 2, "app", "sibling");
     sibling.proportion = 1;
@@ -196,12 +389,12 @@ describe("Core command handlers", () => {
 
     const parent = new SplitContainer("parent");
     parent.rect = { x: 0, y: 0, width: 1000, height: 800 };
-    const sibling = new WindowContainer("sib", minWindow, 2, "app", "sibling");
+    const sibling = new WindowContainer(3, minWindow, 2, "app", "sibling");
     sibling.proportion = 1;
     parent.addChild(window);
     parent.addChild(sibling);
     const adapter = makeAdapter();
-    const config = { minTileWidth: 300, minTileHeight: 240 };
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
 
     const result = resizeHandler.execute(
       makeCommand("resize", ["grow", "width", "60", "ppt"]),
@@ -235,8 +428,8 @@ describe("Core command handlers", () => {
   });
 
   it("layout switches parent layout", () => {
-    const window = new WindowContainer("win", {}, 1, "app", "title");
-    const parent = new SplitContainer("parent", Layout.SplitH);
+    const window = new WindowContainer(1, {}, 1, "app", "title");
+    const parent = new SplitContainer(2, Layout.SplitH);
     parent.addChild(window);
 
     const adapter = makeAdapter();
@@ -255,12 +448,12 @@ describe("Core command handlers", () => {
   });
 
   it("layout supports alternating", () => {
-    const window = new WindowContainer("win", {}, 1, "app", "title");
-    const parent = new SplitContainer("parent", Layout.SplitH);
+    const window = new WindowContainer(1, {}, 1, "app", "title");
+    const parent = new SplitContainer(2, Layout.SplitH);
     parent.addChild(window);
 
     const adapter = makeAdapter();
-    const config = { minTileWidth: 300, minTileHeight: 240 };
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
 
     const result = layoutHandler.execute(makeCommand("layout", ["alternating"]), {
       root: parent as any,

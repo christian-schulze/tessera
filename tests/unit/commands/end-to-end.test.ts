@@ -7,8 +7,8 @@ import { Layout } from "../../../src/tree/container.ts";
 describe("Command execution end-to-end", () => {
   it("parses and executes a command batch", () => {
     const window = {};
-    const focused = new WindowContainer("win", window, 1, "app", "title");
-    const parent = new SplitContainer("parent", Layout.SplitH);
+    const focused = new WindowContainer(1, window, 1, "app", "title");
+    const parent = new SplitContainer(2, Layout.SplitH);
     parent.addChild(focused);
 
     const adapter = {
@@ -21,6 +21,8 @@ describe("Command execution end-to-end", () => {
       setFloating: () => {},
       close: () => {},
       exec: () => {},
+      changeWorkspace: () => {},
+      moveToWorkspace: () => {},
     };
 
     const engine = buildCommandEngine();
@@ -31,6 +33,9 @@ describe("Command execution end-to-end", () => {
       root: parent as any,
       focused,
       adapter,
+      config: { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" },
+      reloadConfig: () => {},
+      switchMode: () => true,
     });
 
     expect(results.every((result) => result.success)).toBeTrue();

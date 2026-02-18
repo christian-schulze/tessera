@@ -15,14 +15,21 @@ describe("command service", () => {
       setFloating: () => {},
       close: () => {},
       exec: () => {},
+      changeWorkspace: () => {},
+      moveToWorkspace: () => {},
     } as WindowAdapter;
 
     const service = buildCommandService({
       engine,
       adapter,
       getRoot: () => null,
-      getConfig: () => ({ minTileWidth: 300, minTileHeight: 240 }),
+      getConfig: () => ({
+        minTileWidth: 300,
+        minTileHeight: 240,
+        alternatingMode: "focused",
+      }),
       getFocused: () => null,
+      reloadConfig: () => {},
     });
 
     expect(service.execute("focus left")).toEqual([
@@ -39,6 +46,8 @@ describe("command service", () => {
       setFloating: () => {},
       close: () => {},
       exec: () => {},
+      changeWorkspace: () => {},
+      moveToWorkspace: () => {},
     } as WindowAdapter;
 
     let captured: { root: unknown; focused: unknown; adapter: WindowAdapter } | null = null;
@@ -56,8 +65,13 @@ describe("command service", () => {
       engine,
       adapter,
       getRoot: () => root as never,
-      getConfig: () => ({ minTileWidth: 300, minTileHeight: 240 }),
+      getConfig: () => ({
+        minTileWidth: 300,
+        minTileHeight: 240,
+        alternatingMode: "focused",
+      }),
       getFocused: () => null,
+      reloadConfig: () => {},
     });
 
     service.execute("focus left");

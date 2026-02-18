@@ -8,7 +8,13 @@ import type { MonitorInfo } from "./tree/tree-builder.js";
 import { RootContainer } from "./tree/root-container.js";
 import { ContainerType } from "./tree/container.js";
 import { WindowTracker } from "./window-tracker.js";
-import { buildCommandEngine, registerDefaultHandlers } from "./commands/index.js";
+import {
+  buildCommandEngine,
+  registerDefaultHandlers,
+} from "./commands/index.js";
+import type { CommandServiceDeps } from "./commands/service.js";
+import { buildDefaultBindingModes } from "./bindings/defaults.js";
+import { BindingManager } from "./bindings/manager.js";
 import { buildCommandService } from "./commands/service.js";
 import type { WindowAdapter } from "./commands/adapter.js";
 import { IpcServer } from "./ipc/server.js";
@@ -45,6 +51,7 @@ export default class TesseraExtension extends Extension {
   private lastPollOutputs = 0;
   private pollingActive = false;
   private config: TesseraConfig = { ...DEFAULT_CONFIG };
+  private bindingManager: BindingManager | null = null;
 
   private logToFile(message: string): void {
     appendLog(message);
@@ -54,10 +61,13 @@ export default class TesseraExtension extends Extension {
     const builder = new TreeBuilder();
     const monitors = monitorsOverride ??
       buildMonitorInfos(Main.layoutManager, global.display);
+    const workspaceManager = global.workspace_manager;
+    const workspaceCount = workspaceManager?.get_n_workspaces?.() ?? 1;
+    const activeWorkspaceIndex = workspaceManager?.get_active_workspace_index?.() ?? 0;
     this.lastRebuildReason = reason;
     this.lastRebuildMonitors = monitors.length;
 
-    const root = builder.build(monitors);
+    const root = builder.build(monitors, { workspaceCount, activeWorkspaceIndex });
     const tracker = new WindowTracker(root, () => this.config);
     tracker.start();
 
@@ -198,16 +208,65 @@ export default class TesseraExtension extends Extension {
         close: (window: unknown) =>
           (window as Meta.Window).delete(global.get_current_time()),
         exec: (command: string) => GLib.spawn_command_line_async(command),
+        changeWorkspace: (index: number) => {
+          const workspaceManager = global.workspace_manager;
+          const workspace = workspaceManager.get_workspace_by_index(index);
+          if (!workspace) {
+            return;
+          }
+          const activation = global.get_current_time();
+          workspace.activate(activation);
+          const metaWorkspace = workspace as unknown as {
+            list_windows: () => Meta.Window[];
+          };
+          const windows = metaWorkspace.list_windows();
+          const focusCandidate = windows.find(
+            (window) =>
+              window.get_window_type() === Meta.WindowType.NORMAL &&
+              !window.is_skip_taskbar()
+          );
+          focusCandidate?.activate(activation);
+        },
+        moveToWorkspace: (window: unknown, index: number, focusWorkspace: boolean) => {
+          const metaWindow = window as Meta.Window;
+          metaWindow.change_workspace_by_index(index, false);
+          if (!focusWorkspace) {
+            return;
+          }
+          const workspaceManager = global.workspace_manager;
+          const workspace = workspaceManager.get_workspace_by_index(index);
+          if (!workspace) {
+            return;
+          }
+          workspace.activate(global.get_current_time());
+        },
       };
 
       const engine = buildCommandEngine();
       registerDefaultHandlers(engine);
-      const commandService = buildCommandService({
+      const commandServiceDeps: CommandServiceDeps = {
         engine,
         adapter,
         getRoot: () => this.root,
         getConfig: () => this.config,
+        reloadConfig: () => {
+          this.config = loadConfig();
+        },
+      };
+      const commandService = buildCommandService(commandServiceDeps);
+
+      this.bindingManager = new BindingManager({
+        executeCommand: (command) => {
+          commandService.execute(command);
+        },
       });
+      for (const mode of buildDefaultBindingModes()) {
+        this.bindingManager.addMode(mode);
+      }
+      commandServiceDeps.switchMode = (name: string) =>
+        this.bindingManager?.switchMode(name) ?? false;
+      this.bindingManager.switchMode("default");
+      this.bindingManager.enable();
 
       const buildDebug = () => {
         const monitorInfos = buildMonitorInfos(Main.layoutManager, global.display);
@@ -338,6 +397,11 @@ export default class TesseraExtension extends Extension {
       this.monitorTimeout = null;
     }
     this.pollingActive = false;
+
+    if (this.bindingManager) {
+      this.bindingManager.disable();
+      this.bindingManager = null;
+    }
 
 
     this.tracker = null;

@@ -7,9 +7,9 @@ describe("applyLayout", () => {
     const windowA = {};
     const windowB = {};
 
-    const split = new SplitContainer("split");
-    const containerA = new WindowContainer("win-a", windowA, 1, "app-a", "A");
-    const containerB = new WindowContainer("win-b", windowB, 2, "app-b", "B");
+    const split = new SplitContainer(1);
+    const containerA = new WindowContainer(2, windowA, 1, "app-a", "A");
+    const containerB = new WindowContainer(3, windowB, 2, "app-b", "B");
 
     containerA.rect = { x: 0, y: 0, width: 200, height: 100 };
     containerB.rect = { x: 200, y: 0, width: 200, height: 100 };
@@ -27,6 +27,8 @@ describe("applyLayout", () => {
       setFloating: () => {},
       close: () => {},
       exec: () => {},
+      changeWorkspace: () => {},
+      moveToWorkspace: () => {},
     };
 
     applyLayout(split, adapter);

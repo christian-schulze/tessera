@@ -31,3 +31,15 @@ export const killHandler: CommandHandler = {
     return result(true);
   },
 };
+
+export const reloadHandler: CommandHandler = {
+  action: "reload",
+  execute: (_command, context) => {
+    if (!context.reloadConfig) {
+      return result(false, "Reload is unavailable");
+    }
+
+    context.reloadConfig();
+    return result(true);
+  },
+};

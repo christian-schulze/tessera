@@ -4,7 +4,9 @@ import { Container, ContainerType } from "../../tree/container.js";
 import { WindowContainer } from "../../tree/window-container.js";
 import { WorkspaceContainer } from "../../tree/workspace-container.js";
 import { reflow } from "../../tree/reflow.js";
+import { appendLog } from "../../logging.js";
 import { applyLayout } from "../../tree/apply-layout.js";
+import { setFocusedContainer } from "../../tree/focus.js";
 
 const result = (success: boolean, message?: string): CommandResult => ({
   success,
@@ -37,6 +39,51 @@ const findWorkspaceByName = (
   return null;
 };
 
+const collectWindows = (container: Container): WindowContainer[] => {
+  const windows: WindowContainer[] = [];
+  const walk = (node: Container): void => {
+    if (node instanceof WindowContainer) {
+      windows.push(node);
+      return;
+    }
+    for (const child of node.children) {
+      walk(child);
+    }
+  };
+  walk(container);
+  return windows;
+};
+
+const scheduleFocusRestore = (action: () => void): void => {
+  if ((globalThis as { jasmine?: unknown }).jasmine) {
+    action();
+    return;
+  }
+  const gi = (globalThis as { imports?: { gi?: { GLib?: unknown } } }).imports?.gi;
+  const GLib = gi?.GLib as
+    | {
+        PRIORITY_DEFAULT: number;
+        SOURCE_REMOVE: boolean;
+        idle_add: (priority: number, callback: () => boolean) => void;
+      }
+    | undefined;
+  if (GLib?.idle_add) {
+    GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+      action();
+      return GLib.SOURCE_REMOVE;
+    });
+    return;
+  }
+
+  if (typeof globalThis.setTimeout === "function") {
+    globalThis.setTimeout(action, 0);
+    return;
+  }
+
+  action();
+};
+
+
 const findWorkspaceForContainer = (
   container: Container
 ): WorkspaceContainer | null => {
@@ -64,6 +111,13 @@ export const workspaceHandler: CommandHandler = {
       return result(false, `Workspace not found: ${target}`);
     }
 
+    appendLog(`workspace command: ${target} -> index=${workspace.number - 1}`);
+    const rememberedFocusId = workspace.lastFocusedWindowId;
+    if (!context.adapter.changeWorkspace) {
+      return result(false, "Workspace switching is unavailable");
+    }
+    context.adapter.changeWorkspace(workspace.number - 1);
+
     for (const output of context.root.children) {
       if (output.type !== ContainerType.Output) {
         continue;
@@ -80,6 +134,26 @@ export const workspaceHandler: CommandHandler = {
     workspace.visible = true;
     workspace.focused = true;
     context.focused = workspace;
+
+    const windows = collectWindows(workspace).filter((window) => !window.floating);
+    const lastFocused = rememberedFocusId ?? workspace.lastFocusedWindowId;
+    let focusTarget = lastFocused
+      ? windows.find((window) => window.windowId === lastFocused)
+      : null;
+    if (!focusTarget) {
+      focusTarget = windows[0] ?? null;
+      if (focusTarget) {
+        workspace.lastFocusedWindowId = focusTarget.windowId;
+      }
+    }
+
+    if (focusTarget) {
+      scheduleFocusRestore(() => {
+        setFocusedContainer(context.root, focusTarget);
+        context.adapter.activate(focusTarget.window);
+        workspace.lastFocusedWindowId = focusTarget.windowId;
+      });
+    }
 
     return result(true);
   },

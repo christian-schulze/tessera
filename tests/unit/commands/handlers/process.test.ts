@@ -23,6 +23,8 @@ describe("Process command handlers", () => {
     exec(command: string) {
       this.execCalls.push(command);
     },
+    changeWorkspace: () => {},
+    moveToWorkspace: () => {},
   });
 
   it("exec runs a command string", () => {
@@ -32,7 +34,8 @@ describe("Process command handlers", () => {
       root: {} as any,
       focused: null,
       adapter,
-      config: { minTileWidth: 300, minTileHeight: 240 },
+      config: { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" },
+      reloadConfig: () => {},
     });
 
     expect(result.success).toBeTrue();
@@ -41,14 +44,15 @@ describe("Process command handlers", () => {
 
   it("kill closes focused windows", () => {
     const window = {};
-    const focused = new WindowContainer("win", window, 1, "app", "title");
+    const focused = new WindowContainer(1, window, 1, "app", "title");
     const adapter = makeAdapter();
 
     const result = killHandler.execute(makeCommand("kill"), {
       root: {} as any,
       focused,
       adapter,
-      config: { minTileWidth: 300, minTileHeight: 240 },
+      config: { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" },
+      reloadConfig: () => {},
     });
 
     expect(result.success).toBeTrue();

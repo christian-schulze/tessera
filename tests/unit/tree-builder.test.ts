@@ -6,6 +6,24 @@ import { WorkspaceContainer } from "../../src/tree/workspace-container.ts";
 import { SplitContainer } from "../../src/tree/split-container.ts";
 
 describe("TreeBuilder", () => {
+  it("builds multiple workspaces per output", () => {
+    const builder = new TreeBuilder();
+    const root = builder.build(
+      [{ index: 0, workArea: { x: 0, y: 0, width: 1920, height: 1080 } }],
+      { workspaceCount: 3, activeWorkspaceIndex: 1 }
+    );
+
+    const output = root.children[0] as OutputContainer;
+    expect(output.children.length).toBe(3);
+    const [ws1, ws2, ws3] = output.children as WorkspaceContainer[];
+    expect(ws1.number).toBe(1);
+    expect(ws2.number).toBe(2);
+    expect(ws3.number).toBe(3);
+    expect(ws1.visible).toBe(false);
+    expect(ws2.visible).toBe(true);
+    expect(ws3.visible).toBe(false);
+  });
+
   it("builds a root tree from monitor info", () => {
     const builder = new TreeBuilder();
     const root = builder.build([

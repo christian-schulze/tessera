@@ -5,7 +5,7 @@ import type { Command, CommandHandler, CommandResult } from "../../../src/comman
 describe("Command engine", () => {
   it("executes a registered handler", () => {
     const engine = new CommandEngine();
-    const root = new RootContainer("root");
+    const root = new RootContainer(1);
     const focused = root;
     const adapter = {
       activate: () => {},
@@ -14,6 +14,8 @@ describe("Command engine", () => {
       setFloating: () => {},
       close: () => {},
       exec: () => {},
+      changeWorkspace: () => {},
+      moveToWorkspace: () => {},
     };
     const result: CommandResult = { success: true, message: "focused" };
 
@@ -38,7 +40,8 @@ describe("Command engine", () => {
       root,
       focused,
       adapter,
-      config: { minTileWidth: 300, minTileHeight: 240 },
+      config: { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" },
+      reloadConfig: () => {},
     });
 
     expect(output).toEqual(result);
@@ -46,7 +49,7 @@ describe("Command engine", () => {
 
   it("returns an error for unknown commands", () => {
     const engine = new CommandEngine();
-    const root = new RootContainer("root");
+    const root = new RootContainer(1);
     const focused = root;
     const adapter = {
       activate: () => {},
@@ -55,6 +58,8 @@ describe("Command engine", () => {
       setFloating: () => {},
       close: () => {},
       exec: () => {},
+      changeWorkspace: () => {},
+      moveToWorkspace: () => {},
     };
 
     const command: Command = {
@@ -68,7 +73,8 @@ describe("Command engine", () => {
       root,
       focused,
       adapter,
-      config: { minTileWidth: 300, minTileHeight: 240 },
+      config: { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" },
+      reloadConfig: () => {},
     });
 
     expect(output.success).toBeFalse();

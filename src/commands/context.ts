@@ -8,5 +8,7 @@ export interface CommandContext {
   focused: Container | null;
   adapter: WindowAdapter;
   config: TesseraConfig;
+  reloadConfig?: () => void;
+  switchMode?: (name: string) => boolean;
   logger?: (message: string) => void;
 }

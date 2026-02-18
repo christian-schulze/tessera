@@ -73,6 +73,8 @@ export class WindowTracker {
       setFloating: () => {},
       close: () => {},
       exec: () => {},
+      changeWorkspace: () => {},
+      moveToWorkspace: () => {},
     };
   }
 

@@ -8,6 +8,7 @@ export interface WorkspaceJSON extends ContainerJSON {
   visible: boolean;
   urgent: boolean;
   floatingWindows: ContainerJSON[];
+  lastFocusedWindowId?: number;
 }
 
 export class WorkspaceContainer extends Container {
@@ -15,6 +16,7 @@ export class WorkspaceContainer extends Container {
   number: number;
   visible: boolean;
   urgent: boolean;
+  lastFocusedWindowId: number | null;
   private floatingWindows: WindowContainer[];
 
   constructor(id: number, name: string, number: number, visible: boolean) {
@@ -23,6 +25,7 @@ export class WorkspaceContainer extends Container {
     this.number = number;
     this.visible = visible;
     this.urgent = false;
+    this.lastFocusedWindowId = null;
     this.floatingWindows = [];
   }
 
@@ -69,6 +72,7 @@ export class WorkspaceContainer extends Container {
       visible: this.visible,
       urgent: this.urgent,
       floatingWindows: this.getFloatingWindows().map((window) => window.toJSON()),
+      lastFocusedWindowId: this.lastFocusedWindowId ?? undefined,
     };
   }
 }

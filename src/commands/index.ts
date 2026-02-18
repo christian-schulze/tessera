@@ -4,6 +4,7 @@ import {
   alternatingModeHandler,
   focusHandler,
   layoutHandler,
+  modeHandler,
   moveHandler,
   resizeHandler,
   splitHandler,
@@ -15,7 +16,7 @@ import {
   unmarkHandler,
   workspaceHandler,
 } from "./handlers/workspace.js";
-import { execHandler, killHandler } from "./handlers/process.js";
+import { execHandler, killHandler, reloadHandler } from "./handlers/process.js";
 import type { Container } from "../tree/container.js";
 
 const aliasHandler = (action: string, handler: CommandHandler): CommandHandler => ({
@@ -30,6 +31,7 @@ export const registerDefaultHandlers = (engine: CommandEngine): void => {
   engine.register(moveHandler);
   engine.register(resizeHandler);
   engine.register(layoutHandler);
+  engine.register(modeHandler);
   engine.register(splitHandler);
   engine.register(alternatingModeHandler);
   engine.register(aliasHandler("splitv", splitHandler));
@@ -41,6 +43,7 @@ export const registerDefaultHandlers = (engine: CommandEngine): void => {
   engine.register(fullscreenHandler);
   engine.register(execHandler);
   engine.register(killHandler);
+  engine.register(reloadHandler);
 };
 
 export const findFocusedContainer = (container: Container): Container | null => {

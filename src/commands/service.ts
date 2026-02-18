@@ -7,11 +7,13 @@ import type { TesseraConfig } from "../config.js";
 import { parseCommandString } from "./parser.js";
 import { findFocusedContainer } from "./index.js";
 
-interface CommandServiceDeps {
+export interface CommandServiceDeps {
   engine: CommandEngine;
   adapter: WindowAdapter;
   getRoot: () => RootContainer | null;
   getConfig: () => TesseraConfig;
+  reloadConfig?: () => void;
+  switchMode?: (name: string) => boolean;
   getFocused?: (root: RootContainer) => Container | null;
   logger?: (message: string) => void;
 }
@@ -38,6 +40,8 @@ export function buildCommandService(deps: CommandServiceDeps): CommandService {
         focused,
         adapter: deps.adapter,
         config: deps.getConfig(),
+        reloadConfig: deps.reloadConfig,
+        switchMode: deps.switchMode,
         logger: deps.logger,
       });
     },
