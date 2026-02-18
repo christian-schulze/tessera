@@ -135,23 +135,30 @@ export const workspaceHandler: CommandHandler = {
     workspace.focused = true;
     context.focused = workspace;
 
-    const windows = collectWindows(workspace).filter((window) => !window.floating);
+    const allWindows = collectWindows(workspace);
+    const windows = allWindows.filter((window) => !window.floating);
     const lastFocused = rememberedFocusId ?? workspace.lastFocusedWindowId;
-    let focusTarget = lastFocused
-      ? windows.find((window) => window.windowId === lastFocused)
+    const rememberedWindow = lastFocused
+      ? allWindows.find((window) => window.windowId === lastFocused)
+      : null;
+    let focusTarget = rememberedWindow && !rememberedWindow.floating
+      ? rememberedWindow
       : null;
     if (!focusTarget) {
       focusTarget = windows[0] ?? null;
-      if (focusTarget) {
+      if (focusTarget && !rememberedWindow) {
         workspace.lastFocusedWindowId = focusTarget.windowId;
       }
     }
 
     if (focusTarget) {
+      const updateLastFocused = !rememberedWindow || !rememberedWindow.floating;
       scheduleFocusRestore(() => {
         setFocusedContainer(context.root, focusTarget);
         context.adapter.activate(focusTarget.window);
-        workspace.lastFocusedWindowId = focusTarget.windowId;
+        if (updateLastFocused) {
+          workspace.lastFocusedWindowId = focusTarget.windowId;
+        }
       });
     }
 
