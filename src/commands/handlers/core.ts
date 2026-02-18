@@ -262,8 +262,9 @@ export const focusHandler: CommandHandler = {
 
     let targetWindow = currentWindow;
     if (direction) {
+      const currentWorkspace = findWorkspaceForContainer(currentWindow);
       targetWindow =
-        findDirectionalWindow(context.root, currentWindow, direction) ?? currentWindow;
+        findDirectionalWindow(currentWorkspace ?? context.root, currentWindow, direction) ?? currentWindow;
     }
 
     if (targetWindow) {
@@ -356,7 +357,8 @@ export const moveHandler: CommandHandler = {
       return result(false, "No focused window");
     }
 
-    const targetWindow = findDirectionalWindow(context.root, sourceWindow, direction);
+    const currentWorkspace = findWorkspaceForContainer(sourceWindow);
+    const targetWindow = findDirectionalWindow(currentWorkspace ?? context.root, sourceWindow, direction);
     if (!targetWindow) {
       return result(true);
     }
