@@ -19,6 +19,26 @@ export const execHandler: CommandHandler = {
   },
 };
 
+export const execCaptureHandler: CommandHandler = {
+  action: "exec-capture",
+  execute: (command, context) => {
+    const commandString = command.args.join(" ").trim();
+    if (!commandString) {
+      return result(false, "Command required");
+    }
+
+    if (!context.adapter.execCapture) {
+      return result(false, "Exec capture is unavailable");
+    }
+
+    const pending = context.adapter.execCapture(commandString);
+    return {
+      success: true,
+      data: pending,
+    };
+  },
+};
+
 export const killHandler: CommandHandler = {
   action: "kill",
   execute: (_command, context) => {

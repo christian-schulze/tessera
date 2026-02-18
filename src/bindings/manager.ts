@@ -88,6 +88,14 @@ export class BindingManager {
     }
   }
 
+  clearModes(): void {
+    if (this.enabled) {
+      this.unregisterAll();
+    }
+    this.modes.clear();
+    this.activeMode = null;
+  }
+
   switchMode(name: string): boolean {
     if (!this.modes.has(name)) {
       appendLog(`binding mode not found: ${name}`);

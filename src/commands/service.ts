@@ -16,14 +16,35 @@ export interface CommandServiceDeps {
   switchMode?: (name: string) => boolean;
   getFocused?: (root: RootContainer) => Container | null;
   logger?: (message: string) => void;
+  onAfterExecute?: () => void;
 }
 
 export interface CommandService {
   execute: (command: string) => CommandResult[];
+  executeForTarget: (command: string, target: Container) => CommandResult[];
 }
 
 export function buildCommandService(deps: CommandServiceDeps): CommandService {
   const getFocused = deps.getFocused ?? findFocusedContainer;
+
+  const executeBatch = (command: string, focused: Container | null) => {
+    const root = deps.getRoot();
+    if (!root) {
+      return [{ success: false, message: "Root container is not ready" }];
+    }
+
+    const commands = parseCommandString(command);
+
+    return deps.engine.executeBatch(commands, {
+      root,
+      focused,
+      adapter: deps.adapter,
+      config: deps.getConfig(),
+      reloadConfig: deps.reloadConfig,
+      switchMode: deps.switchMode,
+      logger: deps.logger,
+    });
+  };
 
   return {
     execute: (command: string) => {
@@ -32,18 +53,14 @@ export function buildCommandService(deps: CommandServiceDeps): CommandService {
         return [{ success: false, message: "Root container is not ready" }];
       }
 
-      const commands = parseCommandString(command);
-      const focused = getFocused(root);
-
-      return deps.engine.executeBatch(commands, {
-        root,
-        focused,
-        adapter: deps.adapter,
-        config: deps.getConfig(),
-        reloadConfig: deps.reloadConfig,
-        switchMode: deps.switchMode,
-        logger: deps.logger,
-      });
+      const results = executeBatch(command, getFocused(root));
+      deps.onAfterExecute?.();
+      return results;
+    },
+    executeForTarget: (command: string, target: Container) => {
+      const results = executeBatch(command, target);
+      deps.onAfterExecute?.();
+      return results;
     },
   };
 }

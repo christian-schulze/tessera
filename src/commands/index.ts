@@ -16,7 +16,7 @@ import {
   unmarkHandler,
   workspaceHandler,
 } from "./handlers/workspace.js";
-import { execHandler, killHandler, reloadHandler } from "./handlers/process.js";
+import { execCaptureHandler, execHandler, killHandler, reloadHandler } from "./handlers/process.js";
 import type { Container } from "../tree/container.js";
 
 const aliasHandler = (action: string, handler: CommandHandler): CommandHandler => ({
@@ -42,6 +42,7 @@ export const registerDefaultHandlers = (engine: CommandEngine): void => {
   engine.register(floatingHandler);
   engine.register(fullscreenHandler);
   engine.register(execHandler);
+  engine.register(execCaptureHandler);
   engine.register(killHandler);
   engine.register(reloadHandler);
 };

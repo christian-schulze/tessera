@@ -3,6 +3,8 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 import Meta from "gi://Meta";
 import GLib from "gi://GLib";
+import Gio from "gi://Gio";
+import St from "gi://St";
 import { TreeBuilder } from "./tree/tree-builder.js";
 import type { MonitorInfo } from "./tree/tree-builder.js";
 import { RootContainer } from "./tree/root-container.js";
@@ -10,11 +12,14 @@ import { ContainerType } from "./tree/container.js";
 import { WindowTracker } from "./window-tracker.js";
 import {
   buildCommandEngine,
+  findFocusedContainer,
   registerDefaultHandlers,
 } from "./commands/index.js";
-import type { CommandServiceDeps } from "./commands/service.js";
+import { WindowContainer } from "./tree/window-container.js";
+import type { CommandServiceDeps, CommandService } from "./commands/service.js";
 import { buildDefaultBindingModes } from "./bindings/defaults.js";
 import { BindingManager } from "./bindings/manager.js";
+import { reloadBindings } from "./bindings/reload.js";
 import { buildCommandService } from "./commands/service.js";
 import type { WindowAdapter } from "./commands/adapter.js";
 import { IpcServer } from "./ipc/server.js";
@@ -22,6 +27,7 @@ import { buildTesseraService } from "./service/tessera.js";
 import { buildMonitorInfos } from "./monitors.js";
 import { buildDebugPayload } from "./ipc/debug.js";
 import { DEFAULT_CONFIG, applyConfig, loadConfig, type TesseraConfig } from "./config.js";
+import { FocusBorder } from "./focus-border.js";
 import { appendLog } from "./logging.js";
 import {
   maybeRebuildTree,
@@ -52,6 +58,21 @@ export default class TesseraExtension extends Extension {
   private pollingActive = false;
   private config: TesseraConfig = { ...DEFAULT_CONFIG };
   private bindingManager: BindingManager | null = null;
+  private commandService: CommandService | null = null;
+  private focusBorder: FocusBorder | null = null;
+
+  private updateFocusBorder(): void {
+    if (!this.focusBorder || !this.root) {
+      return;
+    }
+
+    const focused = findFocusedContainer(this.root);
+    if (focused instanceof WindowContainer) {
+      this.focusBorder.updatePosition(focused.rect);
+    } else {
+      this.focusBorder.updatePosition(null);
+    }
+  }
 
   private logToFile(message: string): void {
     appendLog(message);
@@ -67,8 +88,26 @@ export default class TesseraExtension extends Extension {
     this.lastRebuildReason = reason;
     this.lastRebuildMonitors = monitors.length;
 
-    const root = builder.build(monitors, { workspaceCount, activeWorkspaceIndex });
-    const tracker = new WindowTracker(root, () => this.config);
+    const root = builder.build(monitors, {
+      workspaceCount,
+      activeWorkspaceIndex,
+      workspaceOutputs: this.config.workspaceOutputs,
+    });
+    const tracker = new WindowTracker(
+      root,
+      () => this.config,
+      {
+        executeForTarget: (command, target) => {
+          this.commandService?.executeForTarget(command, target);
+        },
+        onLayoutApplied: () => {
+          this.updateFocusBorder();
+        },
+        onFocusChanged: () => {
+          this.updateFocusBorder();
+        },
+      }
+    );
     tracker.start();
 
     if (this.tracker) {
@@ -208,6 +247,39 @@ export default class TesseraExtension extends Extension {
         close: (window: unknown) =>
           (window as Meta.Window).delete(global.get_current_time()),
         exec: (command: string) => GLib.spawn_command_line_async(command),
+        execCapture: (command: string) => {
+          return new Promise((resolve, reject) => {
+            try {
+              const [ok, argv] = GLib.shell_parse_argv(command);
+              if (!ok || !argv) {
+                reject(new Error(`Failed to parse command: ${command}`));
+                return;
+              }
+              const proc = new Gio.Subprocess({
+                argv,
+                flags:
+                  Gio.SubprocessFlags.STDOUT_PIPE |
+                  Gio.SubprocessFlags.STDERR_PIPE,
+              });
+              proc.init(null);
+              proc.communicate_utf8_async(null, null, (_proc, result) => {
+                try {
+                  const [, stdout, stderr] = proc.communicate_utf8_finish(result);
+                  const exitCode = proc.get_exit_status();
+                  resolve({
+                    stdout: stdout ?? "",
+                    stderr: stderr ?? "",
+                    exitCode,
+                  });
+                } catch (innerError) {
+                  reject(innerError);
+                }
+              });
+            } catch (error) {
+              reject(error);
+            }
+          });
+        },
         changeWorkspace: (index: number) => {
           const workspaceManager = global.workspace_manager;
           const workspace = workspaceManager.get_workspace_by_index(index);
@@ -251,22 +323,43 @@ export default class TesseraExtension extends Extension {
         getConfig: () => this.config,
         reloadConfig: () => {
           this.config = loadConfig();
+          if (this.bindingManager) {
+            reloadBindings(this.bindingManager, this.config);
+          }
+          if (this.focusBorder) {
+            this.focusBorder.updateConfig(this.config.focusedBorder);
+          }
+        },
+        onAfterExecute: () => {
+          this.updateFocusBorder();
+          GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+            this.updateFocusBorder();
+            return GLib.SOURCE_REMOVE;
+          });
         },
       };
       const commandService = buildCommandService(commandServiceDeps);
+      this.commandService = commandService;
 
       this.bindingManager = new BindingManager({
         executeCommand: (command) => {
           commandService.execute(command);
         },
       });
-      for (const mode of buildDefaultBindingModes()) {
+      const modes = this.config.modes ?? buildDefaultBindingModes();
+      for (const mode of modes) {
         this.bindingManager.addMode(mode);
       }
       commandServiceDeps.switchMode = (name: string) =>
         this.bindingManager?.switchMode(name) ?? false;
       this.bindingManager.switchMode("default");
       this.bindingManager.enable();
+
+      this.focusBorder = new FocusBorder(this.config.focusedBorder, {
+        St: St as never,
+        layoutManager: Main.layoutManager as never,
+      });
+      this.focusBorder.enable();
 
       const buildDebug = () => {
         const monitorInfos = buildMonitorInfos(Main.layoutManager, global.display);
@@ -372,6 +465,14 @@ export default class TesseraExtension extends Extension {
         tree: tesseraService.tree,
         execute: commandService.execute,
       };
+
+      for (const cmd of this.config.exec) {
+        try {
+          GLib.spawn_command_line_async(cmd);
+        } catch (execError) {
+          this.logToFile(`startup exec failed: ${cmd}: ${execError}`);
+        }
+      }
     } catch (error) {
       const errorText =
         error instanceof Error
@@ -403,10 +504,15 @@ export default class TesseraExtension extends Extension {
       this.bindingManager = null;
     }
 
+    if (this.focusBorder) {
+      this.focusBorder.disable();
+      this.focusBorder = null;
+    }
 
     this.tracker = null;
     this.root = null;
     this.ipcServer = null;
+    this.commandService = null;
     (globalThis as unknown as { __tessera?: TesseraGlobal }).__tessera =
       undefined;
   }

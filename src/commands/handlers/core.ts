@@ -316,7 +316,7 @@ export const moveHandler: CommandHandler = {
           if (reflowRoot.parent && reflowRoot.parent.type !== ContainerType.Workspace) {
             reflowRoot = reflowRoot.parent;
           }
-          reflow(reflowRoot);
+          reflow(reflowRoot, context.config.gaps);
           applyLayout(reflowRoot, context.adapter);
         }
 
@@ -329,13 +329,14 @@ export const moveHandler: CommandHandler = {
         if (sourceWindow.floating) {
           targetWorkspace.addFloatingWindow(sourceWindow);
         }
-        reflow(split);
+        reflow(split, context.config.gaps);
         applyLayout(split, context.adapter);
         setFocusedContainer(context.root, sourceWindow);
         targetWorkspace.lastFocusedWindowId = sourceWindow.windowId;
       }
 
       context.adapter.moveToWorkspace(sourceWindow.window, index - 1, true);
+      context.adapter.activate(sourceWindow.window);
       return result(true);
     }
 
@@ -390,7 +391,7 @@ export const moveHandler: CommandHandler = {
       reflowRoot = targetParent.parent;
     }
 
-    reflow(reflowRoot);
+    reflow(reflowRoot, context.config.gaps);
     applyLayout(reflowRoot, context.adapter);
 
     return result(true);
@@ -482,7 +483,7 @@ export const resizeHandler: CommandHandler = {
 
     focused.proportion = Math.max(0.1, nextProportion);
 
-    reflow(focused.parent);
+    reflow(focused.parent, context.config.gaps);
     applyLayout(focused.parent, context.adapter);
 
     return result(true);
@@ -500,7 +501,7 @@ export const splitHandler: CommandHandler = {
     const value = command.action === "splitv" || command.args[0] === "v";
     focused.parent.setLayout(value ? Layout.SplitV : Layout.SplitH);
 
-    reflow(focused.parent);
+    reflow(focused.parent, context.config.gaps);
     applyLayout(focused.parent, context.adapter);
 
     return result(true);
@@ -531,7 +532,7 @@ export const layoutHandler: CommandHandler = {
 
     focused.parent.setLayout(layout);
 
-    reflow(focused.parent);
+    reflow(focused.parent, context.config.gaps);
     applyLayout(focused.parent, context.adapter);
 
     return result(true);

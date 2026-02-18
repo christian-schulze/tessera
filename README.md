@@ -87,20 +87,26 @@ make logs-nested
 
 ## Configuration
 
-Create `~/.config/tessera/config.js` to override defaults:
+Create `~/.config/tessera/config.js` to customize Tessera:
 
 ```js
 module.exports = {
-  minTileWidth: 300,
-  minTileHeight: 240,
+  gaps: { inner: 8, outer: 4 },
+  focusedBorder: { color: "#5294e2", width: 2 },
+  rules: [
+    { match: { app_id: "org.gnome.Nautilus" }, commands: ["floating enable"] },
+  ],
+  exec: ["alacritty"],
 };
 ```
 
-You can also update it at runtime:
+Reload at runtime with `Super+Shift+R` or via IPC:
 
 ```bash
-bunx tsx scripts/ipc-run.ts config 360
+bunx tsx scripts/ipc-run.ts execute "reload"
 ```
+
+See [docs/configuration.md](docs/configuration.md) for the full reference, including custom keybindings, window rules, gaps, workspace-output assignments, and startup commands.
 
 ## Review Notes
 

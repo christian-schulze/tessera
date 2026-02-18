@@ -12,6 +12,7 @@ import { updateFocusedWindow } from "./window-tracker-focus.js";
 import { getLayoutStrategy } from "./layout/strategy.js";
 import { appendLog } from "./logging.js";
 import { insertWindowWithStrategy } from "./window-insertion.js";
+import { evaluateRules } from "./rules.js";
 
 type GiModules = {
   Shell?: typeof import("gi://Shell").default;
@@ -49,10 +50,24 @@ export class WindowTracker {
   private adapter: WindowAdapter;
   private layoutRetries: Map<number, number>;
   private getConfig: () => TesseraConfig;
+  private executeForTarget: ((command: string, target: WindowContainer) => void) | null;
+  private onLayoutApplied: (() => void) | null;
+  private onFocusChanged: (() => void) | null;
 
-  constructor(root: RootContainer, getConfig: () => TesseraConfig) {
+  constructor(
+    root: RootContainer,
+    getConfig: () => TesseraConfig,
+    options?: {
+      executeForTarget?: (command: string, target: WindowContainer) => void;
+      onLayoutApplied?: () => void;
+      onFocusChanged?: () => void;
+    }
+  ) {
     this.root = root;
     this.getConfig = getConfig;
+    this.executeForTarget = options?.executeForTarget ?? null;
+    this.onLayoutApplied = options?.onLayoutApplied ?? null;
+    this.onFocusChanged = options?.onFocusChanged ?? null;
     this.windowMap = new Map();
     this.windowSignals = new Map();
     this.displaySignal = null;
@@ -95,6 +110,7 @@ export class WindowTracker {
       () => {
         const focused = global.display.get_focus_window() as MetaWindow | null;
         updateFocusedWindow(this.root, this.windowMap, focused);
+        this.onFocusChanged?.();
       }
     );
 
@@ -216,8 +232,22 @@ export class WindowTracker {
     this.windowMap.set(windowId, container);
     this.attachWindowSignals(windowId, window, container);
 
-    reflow(split);
+    const currentFocus = global.display.get_focus_window() as MetaWindow | null;
+    if (currentFocus) {
+      updateFocusedWindow(this.root, this.windowMap, currentFocus);
+    }
+
+    const { rules } = this.getConfig();
+    if (rules.length > 0 && this.executeForTarget) {
+      const ruleCommands = evaluateRules(rules, container);
+      for (const cmd of ruleCommands) {
+        this.executeForTarget(cmd, container);
+      }
+    }
+
+    reflow(split, this.getConfig().gaps);
     applyLayout(split, this.adapter);
+    this.onLayoutApplied?.();
 
     if (!container.floating) {
       this.scheduleLayoutRetry(container);
@@ -293,8 +323,9 @@ export class WindowTracker {
       if (!matches) {
         const parent = container.parent;
         if (parent) {
-          reflow(parent);
+          reflow(parent, this.getConfig().gaps);
           applyLayout(parent, this.adapter);
+          this.onLayoutApplied?.();
         }
       }
 
@@ -333,8 +364,9 @@ export class WindowTracker {
               Math.floor((workspace.rect.height - height) / 2);
             container.rect = { x, y, width, height };
             this.adapter.moveResize(window, container.rect);
-            reflow(parent);
+            reflow(parent, this.getConfig().gaps);
             applyLayout(parent, this.adapter);
+            this.onLayoutApplied?.();
           }
         }
 
@@ -397,8 +429,9 @@ export class WindowTracker {
       if (!result?.handled) {
         normalizeTree(parent);
       }
-      reflow(parent);
+      reflow(parent, this.getConfig().gaps);
       applyLayout(parent, this.adapter);
+      this.onLayoutApplied?.();
     }
 
     const focused = global.display.get_focus_window() as MetaWindow | null;

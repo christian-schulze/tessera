@@ -4,6 +4,7 @@ import { RootContainer } from "./root-container.js";
 import { OutputContainer } from "./output-container.js";
 import { WorkspaceContainer } from "./workspace-container.js";
 import { SplitContainer } from "./split-container.js";
+import type { WorkspaceOutputMap } from "../config.js";
 
 export interface MonitorInfo {
   index: number;
@@ -13,6 +14,7 @@ export interface MonitorInfo {
 export type TreeBuilderOptions = {
   workspaceCount?: number;
   activeWorkspaceIndex?: number;
+  workspaceOutputs?: WorkspaceOutputMap;
 };
 
 export class TreeBuilder {
@@ -29,6 +31,7 @@ export class TreeBuilder {
     const root = new RootContainer(1);
     const workspaceCount = options.workspaceCount ?? 1;
     const activeWorkspaceIndex = options.activeWorkspaceIndex ?? 0;
+    const workspaceOutputs = options.workspaceOutputs ?? {};
 
     for (const monitor of monitors) {
       const workArea = this.toRect(monitor.workArea);
@@ -37,9 +40,16 @@ export class TreeBuilder {
 
       for (let index = 0; index < workspaceCount; index += 1) {
         const workspaceNumber = index + 1;
+        const workspaceKey = String(workspaceNumber);
+        const assignedOutput = workspaceOutputs[workspaceKey];
+
+        if (assignedOutput !== undefined && assignedOutput !== monitor.index) {
+          continue;
+        }
+
         const workspace = new WorkspaceContainer(
           root.nextId(),
-          String(workspaceNumber),
+          workspaceKey,
           workspaceNumber,
           index === activeWorkspaceIndex
         );

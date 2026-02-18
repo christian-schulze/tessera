@@ -29,8 +29,12 @@ export function reflow(container: Container, gaps?: GapConfig): void {
   strategy.computeRects(container);
   overflowContext.gaps = undefined;
 
+  const childGaps = gaps && gaps.outer
+    ? { inner: gaps.inner, outer: 0 }
+    : gaps;
+
   layoutChildren.forEach((child) => {
-    reflow(child, gaps);
+    reflow(child, childGaps);
   });
 }
 

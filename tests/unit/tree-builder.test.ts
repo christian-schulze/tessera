@@ -63,4 +63,79 @@ describe("TreeBuilder", () => {
     expect(split0.rect).toEqual(ws0.rect);
     expect(split1.rect).toEqual(ws1.rect);
   });
+
+  describe("workspaceOutputs", () => {
+    it("assigns workspaces to specific outputs", () => {
+      const builder = new TreeBuilder();
+      const root = builder.build(
+        [
+          { index: 0, workArea: { x: 0, y: 0, width: 1920, height: 1080 } },
+          { index: 1, workArea: { x: 1920, y: 0, width: 1920, height: 1080 } },
+        ],
+        {
+          workspaceCount: 3,
+          activeWorkspaceIndex: 0,
+          workspaceOutputs: { "1": 0, "2": 0, "3": 1 },
+        }
+      );
+
+      const output0 = root.children[0] as OutputContainer;
+      const output1 = root.children[1] as OutputContainer;
+
+      const ws0Numbers = (output0.children as WorkspaceContainer[]).map(
+        (ws) => ws.number
+      );
+      const ws1Numbers = (output1.children as WorkspaceContainer[]).map(
+        (ws) => ws.number
+      );
+
+      expect(ws0Numbers).toEqual([1, 2]);
+      expect(ws1Numbers).toEqual([3]);
+    });
+
+    it("creates all workspaces on each output when no assignments", () => {
+      const builder = new TreeBuilder();
+      const root = builder.build(
+        [
+          { index: 0, workArea: { x: 0, y: 0, width: 1920, height: 1080 } },
+          { index: 1, workArea: { x: 1920, y: 0, width: 1920, height: 1080 } },
+        ],
+        { workspaceCount: 2, activeWorkspaceIndex: 0 }
+      );
+
+      const output0 = root.children[0] as OutputContainer;
+      const output1 = root.children[1] as OutputContainer;
+
+      expect(output0.children.length).toBe(2);
+      expect(output1.children.length).toBe(2);
+    });
+
+    it("creates unassigned workspaces on all outputs", () => {
+      const builder = new TreeBuilder();
+      const root = builder.build(
+        [
+          { index: 0, workArea: { x: 0, y: 0, width: 1920, height: 1080 } },
+          { index: 1, workArea: { x: 1920, y: 0, width: 1920, height: 1080 } },
+        ],
+        {
+          workspaceCount: 3,
+          activeWorkspaceIndex: 0,
+          workspaceOutputs: { "1": 0 },
+        }
+      );
+
+      const output0 = root.children[0] as OutputContainer;
+      const output1 = root.children[1] as OutputContainer;
+
+      const ws0Numbers = (output0.children as WorkspaceContainer[]).map(
+        (ws) => ws.number
+      );
+      const ws1Numbers = (output1.children as WorkspaceContainer[]).map(
+        (ws) => ws.number
+      );
+
+      expect(ws0Numbers).toEqual([1, 2, 3]);
+      expect(ws1Numbers).toEqual([2, 3]);
+    });
+  });
 });

@@ -1,15 +1,52 @@
+import type { BindingMode } from "./bindings/mode.js";
+import { buildDefaultBindingModes } from "./bindings/defaults.js";
+
 export type AlternatingMode = "focused" | "tail";
+
+export type GapsConfig = {
+  inner: number;
+  outer: number;
+};
+
+export type FocusedBorderConfig = {
+  color: string;
+  width: number;
+};
+
+export type RuleCriteria = {
+  app_id?: string;
+  title?: string;
+};
+
+export type ForWindowRule = {
+  match: RuleCriteria;
+  commands: string[];
+};
+
+export type WorkspaceOutputMap = Record<string, number>;
 
 export type TesseraConfig = {
   minTileWidth: number;
   minTileHeight: number;
   alternatingMode: AlternatingMode;
+  gaps: GapsConfig;
+  focusedBorder: FocusedBorderConfig;
+  modes: BindingMode[] | null;
+  rules: ForWindowRule[];
+  workspaceOutputs: WorkspaceOutputMap;
+  exec: string[];
 };
 
 export const DEFAULT_CONFIG: TesseraConfig = {
   minTileWidth: 300,
   minTileHeight: 240,
   alternatingMode: "focused",
+  gaps: { inner: 0, outer: 0 },
+  focusedBorder: { color: "", width: 0 },
+  modes: null,
+  rules: [],
+  workspaceOutputs: {},
+  exec: [],
 };
 
 const normalizeMinTileWidth = (value: unknown): number | null => {
@@ -44,6 +81,195 @@ const normalizeAlternatingMode = (value: unknown): AlternatingMode | null => {
   return null;
 };
 
+const normalizeGaps = (value: unknown): GapsConfig | null => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const candidate = value as { inner?: unknown; outer?: unknown };
+  const inner = typeof candidate.inner === "number" && Number.isFinite(candidate.inner) && candidate.inner >= 0
+    ? Math.floor(candidate.inner)
+    : null;
+  const outer = typeof candidate.outer === "number" && Number.isFinite(candidate.outer) && candidate.outer >= 0
+    ? Math.floor(candidate.outer)
+    : null;
+
+  if (inner === null && outer === null) {
+    return null;
+  }
+
+  return {
+    inner: inner ?? 0,
+    outer: outer ?? 0,
+  };
+};
+
+const normalizeFocusedBorder = (value: unknown): FocusedBorderConfig | null => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const candidate = value as { color?: unknown; width?: unknown };
+  const color = typeof candidate.color === "string" ? candidate.color : null;
+  const width = typeof candidate.width === "number" && Number.isFinite(candidate.width) && candidate.width >= 0
+    ? Math.floor(candidate.width)
+    : null;
+
+  if (color === null && width === null) {
+    return null;
+  }
+
+  return {
+    color: color ?? "",
+    width: width ?? 0,
+  };
+};
+
+const normalizeBinding = (value: unknown): BindingMode["bindings"][number] | null => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const candidate = value as { keys?: unknown; command?: unknown; release?: unknown };
+  if (!Array.isArray(candidate.keys) || candidate.keys.length === 0) {
+    return null;
+  }
+
+  const keys = candidate.keys.filter((k): k is string => typeof k === "string");
+  if (keys.length === 0) {
+    return null;
+  }
+
+  if (typeof candidate.command !== "string" || !candidate.command.trim()) {
+    return null;
+  }
+
+  const binding: BindingMode["bindings"][number] = {
+    keys,
+    command: candidate.command,
+  };
+
+  if (candidate.release === true) {
+    binding.release = true;
+  }
+
+  return binding;
+};
+
+const normalizeModes = (value: unknown): BindingMode[] | null => {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const modes: BindingMode[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+
+    const candidate = item as { name?: unknown; bindings?: unknown };
+    if (typeof candidate.name !== "string" || !candidate.name.trim()) {
+      continue;
+    }
+
+    if (!Array.isArray(candidate.bindings)) {
+      continue;
+    }
+
+    const bindings: BindingMode["bindings"] = [];
+    for (const raw of candidate.bindings) {
+      const binding = normalizeBinding(raw);
+      if (binding) {
+        bindings.push(binding);
+      }
+    }
+
+    modes.push({ name: candidate.name, bindings });
+  }
+
+  return modes.length > 0 ? modes : null;
+};
+
+const normalizeRules = (value: unknown): ForWindowRule[] | null => {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const rules: ForWindowRule[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+
+    const candidate = item as { match?: unknown; commands?: unknown };
+    if (!candidate.match || typeof candidate.match !== "object") {
+      continue;
+    }
+
+    if (!Array.isArray(candidate.commands) || candidate.commands.length === 0) {
+      continue;
+    }
+
+    const commands = candidate.commands.filter(
+      (c): c is string => typeof c === "string" && c.trim().length > 0
+    );
+    if (commands.length === 0) {
+      continue;
+    }
+
+    const match = candidate.match as { app_id?: unknown; title?: unknown };
+    const criteria: RuleCriteria = {};
+    if (typeof match.app_id === "string") {
+      criteria.app_id = match.app_id;
+    }
+    if (typeof match.title === "string") {
+      criteria.title = match.title;
+    }
+
+    if (!criteria.app_id && !criteria.title) {
+      continue;
+    }
+
+    rules.push({ match: criteria, commands });
+  }
+
+  return rules.length > 0 ? rules : null;
+};
+
+const normalizeWorkspaceOutputs = (value: unknown): WorkspaceOutputMap | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const entries = Object.entries(value as Record<string, unknown>);
+  if (entries.length === 0) {
+    return null;
+  }
+
+  const map: WorkspaceOutputMap = {};
+  let hasValid = false;
+  for (const [key, val] of entries) {
+    if (typeof val === "number" && Number.isFinite(val) && val >= 0) {
+      map[key] = Math.floor(val);
+      hasValid = true;
+    }
+  }
+
+  return hasValid ? map : null;
+};
+
+const normalizeExec = (value: unknown): string[] | null => {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const commands = value.filter(
+    (c): c is string => typeof c === "string" && c.trim().length > 0
+  );
+
+  return commands.length > 0 ? commands : null;
+};
+
 export const applyConfig = (
   target: TesseraConfig,
   updates: unknown
@@ -52,11 +278,8 @@ export const applyConfig = (
     return target;
   }
 
-  const candidate = updates as {
-    minTileWidth?: unknown;
-    minTileHeight?: unknown;
-    alternatingMode?: unknown;
-  };
+  const candidate = updates as Record<string, unknown>;
+
   const minTileWidth = normalizeMinTileWidth(candidate.minTileWidth);
   if (minTileWidth !== null) {
     target.minTileWidth = minTileWidth;
@@ -72,6 +295,36 @@ export const applyConfig = (
     target.alternatingMode = alternatingMode;
   }
 
+  const gaps = normalizeGaps(candidate.gaps);
+  if (gaps !== null) {
+    target.gaps = gaps;
+  }
+
+  const focusedBorder = normalizeFocusedBorder(candidate.focusedBorder);
+  if (focusedBorder !== null) {
+    target.focusedBorder = focusedBorder;
+  }
+
+  const modes = normalizeModes(candidate.modes);
+  if (modes !== null) {
+    target.modes = modes;
+  }
+
+  const rules = normalizeRules(candidate.rules);
+  if (rules !== null) {
+    target.rules = rules;
+  }
+
+  const workspaceOutputs = normalizeWorkspaceOutputs(candidate.workspaceOutputs);
+  if (workspaceOutputs !== null) {
+    target.workspaceOutputs = workspaceOutputs;
+  }
+
+  const exec = normalizeExec(candidate.exec);
+  if (exec !== null) {
+    target.exec = exec;
+  }
+
   return target;
 };
 
@@ -85,7 +338,7 @@ export const loadConfig = (): TesseraConfig => {
     }
     return glib as typeof import("gi://GLib").default;
   })();
-  const config: TesseraConfig = { ...DEFAULT_CONFIG };
+  const config: TesseraConfig = { ...DEFAULT_CONFIG, gaps: { ...DEFAULT_CONFIG.gaps }, focusedBorder: { ...DEFAULT_CONFIG.focusedBorder } };
   const home = GLib.get_home_dir();
   const path = GLib.build_filenamev([home, ".config", "tessera", "config.js"]);
 
@@ -99,14 +352,16 @@ export const loadConfig = (): TesseraConfig => {
       return config;
     }
 
+    const tessera = { defaults: { buildDefaultBindingModes } };
     const module = { exports: {} as Record<string, unknown> };
     const exports = module.exports;
     const factory = new Function(
       "module",
       "exports",
+      "tessera",
       `${contents}\n;return module.exports ?? exports.config ?? exports.default ?? exports;`
     );
-    const result = factory(module, exports);
+    const result = factory(module, exports, tessera);
     applyConfig(config, result);
   } catch (error) {
     console.warn(`Failed to load tessera config: ${error}`);

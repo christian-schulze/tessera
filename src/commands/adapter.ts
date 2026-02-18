@@ -7,6 +7,7 @@ export interface WindowAdapter {
   setFloating: (window: unknown, floating: boolean) => void;
   close: (window: unknown) => void;
   exec: (command: string) => void;
+  execCapture?: (command: string) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
   changeWorkspace: (index: number) => void;
   moveToWorkspace: (window: unknown, index: number, focusWorkspace: boolean) => void;
 }
