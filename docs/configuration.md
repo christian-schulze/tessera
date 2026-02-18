@@ -105,7 +105,9 @@ When `modes` is omitted or `null`, these defaults are used:
 | `Super+Shift+T` | Retile (reapply layout to all windows) |
 | `Super+R` | Enter resize mode |
 | `Super+1`..`9` | Switch to workspace 1-9 |
+| `Super+0` | Switch to workspace 10 |
 | `Super+Shift+1`..`9` | Move window to workspace 1-9 |
+| `Super+Shift+0` | Move window to workspace 10 |
 
 **Resize mode:**
 

@@ -12,6 +12,9 @@ const workspaceBindings = (): BindingMode["bindings"] => {
     });
   }
 
+  bindings.push({ keys: ["<Super>0"], command: "workspace 10" });
+  bindings.push({ keys: ["<Super><Shift>0"], command: "move container to workspace 10" });
+
   return bindings;
 };
 
