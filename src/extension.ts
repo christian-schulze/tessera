@@ -116,6 +116,22 @@ export default class TesseraExtension extends Extension {
         onFocusChanged: () => {
           this.updateFocusBorder();
         },
+        shouldSkipWindow: (window) => {
+          const metaWindow = window as Meta.Window;
+          const type = metaWindow.get_window_type();
+          return (
+            type === Meta.WindowType.DESKTOP ||
+            type === Meta.WindowType.DOCK ||
+            type === Meta.WindowType.SPLASHSCREEN ||
+            type === Meta.WindowType.MENU ||
+            type === Meta.WindowType.DROPDOWN_MENU ||
+            type === Meta.WindowType.POPUP_MENU ||
+            type === Meta.WindowType.TOOLTIP ||
+            type === Meta.WindowType.NOTIFICATION ||
+            type === Meta.WindowType.COMBO ||
+            type === Meta.WindowType.DND
+          );
+        },
       }
     );
     tracker.start();

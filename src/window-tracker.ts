@@ -53,6 +53,7 @@ export class WindowTracker {
   private executeForTarget: ((command: string, target: WindowContainer) => void) | null;
   private onLayoutApplied: (() => void) | null;
   private onFocusChanged: (() => void) | null;
+  private shouldSkipWindow: ((window: unknown) => boolean) | null;
 
   constructor(
     root: RootContainer,
@@ -61,6 +62,7 @@ export class WindowTracker {
       executeForTarget?: (command: string, target: WindowContainer) => void;
       onLayoutApplied?: () => void;
       onFocusChanged?: () => void;
+      shouldSkipWindow?: (window: unknown) => boolean;
     }
   ) {
     this.root = root;
@@ -68,6 +70,7 @@ export class WindowTracker {
     this.executeForTarget = options?.executeForTarget ?? null;
     this.onLayoutApplied = options?.onLayoutApplied ?? null;
     this.onFocusChanged = options?.onFocusChanged ?? null;
+    this.shouldSkipWindow = options?.shouldSkipWindow ?? null;
     this.windowMap = new Map();
     this.windowSignals = new Map();
     this.displaySignal = null;
@@ -169,6 +172,10 @@ export class WindowTracker {
   private trackWindow(window: MetaWindow): void {
     const windowId = this.getWindowId(window);
     if (this.windowMap.has(windowId)) {
+      return;
+    }
+
+    if (this.shouldSkipWindow?.(window)) {
       return;
     }
 
