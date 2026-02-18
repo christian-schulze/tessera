@@ -102,6 +102,7 @@ When `modes` is omitted or `null`, these defaults are used:
 | `Super+F` | Toggle fullscreen |
 | `Super+Shift+Q` | Close focused window |
 | `Super+Shift+R` | Reload config |
+| `Super+Shift+T` | Retile (reapply layout to all windows) |
 | `Super+R` | Enter resize mode |
 | `Super+1`..`9` | Switch to workspace 1-9 |
 | `Super+Shift+1`..`9` | Move window to workspace 1-9 |
@@ -173,6 +174,7 @@ Any Tessera command can be used in rules:
 - `move container to workspace N` — send window to workspace N
 - `fullscreen enable` — make window fullscreen
 - `resize set W H` — set window size
+- `retile` — recompute and reapply layout to all windows
 
 ## Workspace-Output Assignments
 
@@ -199,10 +201,18 @@ module.exports = {
 
 ## Runtime Reload
 
-Press `Super+Shift+R` (default binding) or run the `reload` command via IPC to reload the config file. This re-reads `~/.config/tessera/config.js`, applies all settings, and reloads keybindings.
+Press `Super+Shift+R` (default binding) or run the `reload` command via IPC to reload the config file. This re-reads `~/.config/tessera/config.js`, applies all settings, and reloads keybindings. A notification is shown when the reload completes.
 
 ```bash
 bunx tsx scripts/ipc-run.ts execute "reload"
 ```
 
 Note: `exec` commands only run on initial enable, not on reload.
+
+## Retile
+
+Press `Super+Shift+T` (default binding) or run the `retile` command via IPC to recompute and reapply the tiling layout to all windows. Useful if windows have drifted out of position (e.g. after connecting a monitor or waking from suspend).
+
+```bash
+bunx tsx scripts/ipc-run.ts execute "retile"
+```

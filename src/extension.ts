@@ -339,6 +339,9 @@ export default class TesseraExtension extends Extension {
           if (this.focusBorder) {
             this.focusBorder.updateConfig(this.config.focusedBorder);
           }
+          if (typeof Main.notify === "function") {
+            Main.notify("Tessera", "Configuration reloaded");
+          }
         },
         onAfterExecute: () => {
           this.updateFocusBorder();

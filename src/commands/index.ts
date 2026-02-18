@@ -7,6 +7,7 @@ import {
   modeHandler,
   moveHandler,
   resizeHandler,
+  retileHandler,
   splitHandler,
 } from "./handlers/core.js";
 import {
@@ -34,6 +35,7 @@ export const registerDefaultHandlers = (engine: CommandEngine): void => {
   engine.register(modeHandler);
   engine.register(splitHandler);
   engine.register(alternatingModeHandler);
+  engine.register(retileHandler);
   engine.register(aliasHandler("splitv", splitHandler));
   engine.register(aliasHandler("splith", splitHandler));
   engine.register(workspaceHandler);

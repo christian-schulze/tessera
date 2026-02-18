@@ -33,6 +33,7 @@ export const buildDefaultBindingModes = (): BindingMode[] => [
       { keys: ["<Super>f"], command: "fullscreen toggle" },
       { keys: ["<Super><Shift>q"], command: "kill" },
       { keys: ["<Super><Shift>r"], command: "reload" },
+      { keys: ["<Super><Shift>t"], command: "retile" },
       { keys: ["<Super>r"], command: "mode \"resize\"" },
       ...workspaceBindings(),
     ],

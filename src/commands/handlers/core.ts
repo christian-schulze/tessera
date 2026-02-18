@@ -552,3 +552,12 @@ export const alternatingModeHandler: CommandHandler = {
     return result(true);
   },
 };
+
+export const retileHandler: CommandHandler = {
+  action: "retile",
+  execute: (_command, context) => {
+    reflow(context.root, context.config.gaps);
+    applyLayout(context.root, context.adapter);
+    return result(true);
+  },
+};
