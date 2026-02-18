@@ -68,7 +68,13 @@ export default class TesseraExtension extends Extension {
 
     const focused = findFocusedContainer(this.root);
     if (focused instanceof WindowContainer) {
-      this.focusBorder.updatePosition(focused.rect);
+      const frameRect = (focused.window as Meta.Window).get_frame_rect();
+      this.focusBorder.updatePosition({
+        x: frameRect.x,
+        y: frameRect.y,
+        width: frameRect.width,
+        height: frameRect.height,
+      });
     } else {
       this.focusBorder.updatePosition(null);
     }
@@ -102,6 +108,10 @@ export default class TesseraExtension extends Extension {
         },
         onLayoutApplied: () => {
           this.updateFocusBorder();
+          GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
+            this.updateFocusBorder();
+            return GLib.SOURCE_REMOVE;
+          });
         },
         onFocusChanged: () => {
           this.updateFocusBorder();
