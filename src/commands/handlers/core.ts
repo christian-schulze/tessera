@@ -556,8 +556,14 @@ export const alternatingModeHandler: CommandHandler = {
 export const retileHandler: CommandHandler = {
   action: "retile",
   execute: (_command, context) => {
-    reflow(context.root, context.config.gaps);
-    applyLayout(context.root, context.adapter);
+    for (const output of context.root.children) {
+      for (const workspace of output.children) {
+        if (workspace instanceof WorkspaceContainer) {
+          reflow(workspace, context.config.gaps);
+          applyLayout(workspace, context.adapter);
+        }
+      }
+    }
     return result(true);
   },
 };
