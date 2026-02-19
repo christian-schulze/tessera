@@ -119,7 +119,7 @@ export default class TesseraExtension extends Extension {
         shouldSkipWindow: (window) => {
           const metaWindow = window as Meta.Window;
           const type = metaWindow.get_window_type();
-          return (
+          if (
             type === Meta.WindowType.DESKTOP ||
             type === Meta.WindowType.DOCK ||
             type === Meta.WindowType.SPLASHSCREEN ||
@@ -130,7 +130,14 @@ export default class TesseraExtension extends Extension {
             type === Meta.WindowType.NOTIFICATION ||
             type === Meta.WindowType.COMBO ||
             type === Meta.WindowType.DND
-          );
+          ) {
+            return true;
+          }
+          // xwaylandvideobridge is an invisible KDE helper window that
+          // captures screen content for XWayland apps; it has no visible
+          // presence and must not be tiled.
+          const wmClass = metaWindow.get_wm_class?.() ?? "";
+          return wmClass === "xwaylandvideobridge";
         },
       }
     );
