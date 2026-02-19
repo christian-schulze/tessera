@@ -3,16 +3,6 @@ import { buildDefaultBindingModes } from "./bindings/defaults.js";
 
 export type AlternatingMode = "focused" | "tail";
 
-export type GapsConfig = {
-  inner: number;
-  outer: number;
-};
-
-export type FocusedBorderConfig = {
-  color: string;
-  width: number;
-};
-
 export type RuleCriteria = {
   app_id?: string;
   title?: string;
@@ -29,8 +19,6 @@ export type TesseraConfig = {
   minTileWidth: number;
   minTileHeight: number;
   alternatingMode: AlternatingMode;
-  gaps: GapsConfig;
-  focusedBorder: FocusedBorderConfig;
   modes: BindingMode[] | null;
   rules: ForWindowRule[];
   workspaceOutputs: WorkspaceOutputMap;
@@ -41,8 +29,6 @@ export const DEFAULT_CONFIG: TesseraConfig = {
   minTileWidth: 300,
   minTileHeight: 240,
   alternatingMode: "focused",
-  gaps: { inner: 0, outer: 0 },
-  focusedBorder: { color: "", width: 0 },
   modes: null,
   rules: [],
   workspaceOutputs: {},
@@ -79,50 +65,6 @@ const normalizeAlternatingMode = (value: unknown): AlternatingMode | null => {
   }
 
   return null;
-};
-
-const normalizeGaps = (value: unknown): GapsConfig | null => {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-
-  const candidate = value as { inner?: unknown; outer?: unknown };
-  const inner = typeof candidate.inner === "number" && Number.isFinite(candidate.inner) && candidate.inner >= 0
-    ? Math.floor(candidate.inner)
-    : null;
-  const outer = typeof candidate.outer === "number" && Number.isFinite(candidate.outer) && candidate.outer >= 0
-    ? Math.floor(candidate.outer)
-    : null;
-
-  if (inner === null && outer === null) {
-    return null;
-  }
-
-  return {
-    inner: inner ?? 0,
-    outer: outer ?? 0,
-  };
-};
-
-const normalizeFocusedBorder = (value: unknown): FocusedBorderConfig | null => {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-
-  const candidate = value as { color?: unknown; width?: unknown };
-  const color = typeof candidate.color === "string" ? candidate.color : null;
-  const width = typeof candidate.width === "number" && Number.isFinite(candidate.width) && candidate.width >= 0
-    ? Math.floor(candidate.width)
-    : null;
-
-  if (color === null && width === null) {
-    return null;
-  }
-
-  return {
-    color: color ?? "",
-    width: width ?? 0,
-  };
 };
 
 const normalizeBinding = (value: unknown): BindingMode["bindings"][number] | null => {
@@ -295,16 +237,6 @@ export const applyConfig = (
     target.alternatingMode = alternatingMode;
   }
 
-  const gaps = normalizeGaps(candidate.gaps);
-  if (gaps !== null) {
-    target.gaps = gaps;
-  }
-
-  const focusedBorder = normalizeFocusedBorder(candidate.focusedBorder);
-  if (focusedBorder !== null) {
-    target.focusedBorder = focusedBorder;
-  }
-
   const modes = normalizeModes(candidate.modes);
   if (modes !== null) {
     target.modes = modes;
@@ -338,7 +270,7 @@ export const loadConfig = (): TesseraConfig => {
     }
     return glib as typeof import("gi://GLib").default;
   })();
-  const config: TesseraConfig = { ...DEFAULT_CONFIG, gaps: { ...DEFAULT_CONFIG.gaps }, focusedBorder: { ...DEFAULT_CONFIG.focusedBorder } };
+  const config: TesseraConfig = { ...DEFAULT_CONFIG };
   const home = GLib.get_home_dir();
   const path = GLib.build_filenamev([home, ".config", "tessera", "config.js"]);
 

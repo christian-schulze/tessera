@@ -4,7 +4,6 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import Meta from "gi://Meta";
 import GLib from "gi://GLib";
 import Gio from "gi://Gio";
-import St from "gi://St";
 import { TreeBuilder } from "./tree/tree-builder.js";
 import type { MonitorInfo } from "./tree/tree-builder.js";
 import { RootContainer } from "./tree/root-container.js";
@@ -12,10 +11,8 @@ import { ContainerType } from "./tree/container.js";
 import { WindowTracker } from "./window-tracker.js";
 import {
   buildCommandEngine,
-  findFocusedContainer,
   registerDefaultHandlers,
 } from "./commands/index.js";
-import { WindowContainer } from "./tree/window-container.js";
 import type { CommandServiceDeps, CommandService } from "./commands/service.js";
 import { buildDefaultBindingModes } from "./bindings/defaults.js";
 import { BindingManager } from "./bindings/manager.js";
@@ -27,7 +24,6 @@ import { buildTesseraService } from "./service/tessera.js";
 import { buildMonitorInfos } from "./monitors.js";
 import { buildDebugPayload } from "./ipc/debug.js";
 import { DEFAULT_CONFIG, applyConfig, loadConfig, type TesseraConfig } from "./config.js";
-import { FocusBorder } from "./focus-border.js";
 import { appendLog, writeSnapshot } from "./logging.js";
 import {
   maybeRebuildTree,
@@ -59,26 +55,6 @@ export default class TesseraExtension extends Extension {
   private config: TesseraConfig = { ...DEFAULT_CONFIG };
   private bindingManager: BindingManager | null = null;
   private commandService: CommandService | null = null;
-  private focusBorder: FocusBorder | null = null;
-
-  private updateFocusBorder(): void {
-    if (!this.focusBorder || !this.root) {
-      return;
-    }
-
-    const focused = findFocusedContainer(this.root);
-    if (focused instanceof WindowContainer) {
-      const frameRect = (focused.window as Meta.Window).get_frame_rect();
-      this.focusBorder.updatePosition({
-        x: frameRect.x,
-        y: frameRect.y,
-        width: frameRect.width,
-        height: frameRect.height,
-      });
-    } else {
-      this.focusBorder.updatePosition(null);
-    }
-  }
 
   private logToFile(message: string): void {
     appendLog(message);
@@ -87,7 +63,7 @@ export default class TesseraExtension extends Extension {
   private rebuildTree(reason: string, monitorsOverride?: MonitorInfo[]): void {
     const builder = new TreeBuilder();
     const monitors = monitorsOverride ??
-      buildMonitorInfos(Main.layoutManager, global.display);
+      buildMonitorInfos(Main.layoutManager, global.display, Main.panel as { height: number });
     const workspaceManager = global.workspace_manager;
     const workspaceCount = workspaceManager?.get_n_workspaces?.() ?? 1;
     const activeWorkspaceIndex = workspaceManager?.get_active_workspace_index?.() ?? 0;
@@ -106,16 +82,8 @@ export default class TesseraExtension extends Extension {
         executeForTarget: (command, target) => {
           this.commandService?.executeForTarget(command, target);
         },
-        onLayoutApplied: () => {
-          this.updateFocusBorder();
-          GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
-            this.updateFocusBorder();
-            return GLib.SOURCE_REMOVE;
-          });
-        },
-        onFocusChanged: () => {
-          this.updateFocusBorder();
-        },
+        onLayoutApplied: () => {},
+        onFocusChanged: () => {},
         shouldSkipWindow: (window) => {
           const metaWindow = window as Meta.Window;
           const type = metaWindow.get_window_type();
@@ -129,7 +97,9 @@ export default class TesseraExtension extends Extension {
             type === Meta.WindowType.TOOLTIP ||
             type === Meta.WindowType.NOTIFICATION ||
             type === Meta.WindowType.COMBO ||
-            type === Meta.WindowType.DND
+            type === Meta.WindowType.DND ||
+            type === Meta.WindowType.DIALOG ||
+            type === Meta.WindowType.MODAL_DIALOG
           ) {
             return true;
           }
@@ -169,7 +139,7 @@ export default class TesseraExtension extends Extension {
     const maxAttempts = 120;
     this.monitorTimeout = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 250, () => {
       this.pollAttempts += 1;
-      const monitors = buildMonitorInfos(Main.layoutManager, global.display);
+      const monitors = buildMonitorInfos(Main.layoutManager, global.display, Main.panel as { height: number });
       const outputs = this.root?.children.length ?? 0;
       const hasWorkAreaMismatch = (() => {
         if (!this.root || monitors.length === 0) {
@@ -359,20 +329,11 @@ export default class TesseraExtension extends Extension {
           if (this.bindingManager) {
             reloadBindings(this.bindingManager, this.config);
           }
-          if (this.focusBorder) {
-            this.focusBorder.updateConfig(this.config.focusedBorder);
-          }
           if (typeof Main.notify === "function") {
             Main.notify("Tessera", "Configuration reloaded");
           }
         },
-        onAfterExecute: () => {
-          this.updateFocusBorder();
-          GLib.timeout_add(GLib.PRIORITY_DEFAULT, 100, () => {
-            this.updateFocusBorder();
-            return GLib.SOURCE_REMOVE;
-          });
-        },
+        onAfterExecute: () => {},
       };
       const commandService = buildCommandService(commandServiceDeps);
       this.commandService = commandService;
@@ -391,14 +352,8 @@ export default class TesseraExtension extends Extension {
       this.bindingManager.switchMode("default");
       this.bindingManager.enable();
 
-      this.focusBorder = new FocusBorder(this.config.focusedBorder, {
-        St: St as never,
-        layoutManager: Main.layoutManager as never,
-      });
-      this.focusBorder.enable();
-
       const buildDebug = () => {
-        const monitorInfos = buildMonitorInfos(Main.layoutManager, global.display);
+        const monitorInfos = buildMonitorInfos(Main.layoutManager, global.display, Main.panel as { height: number });
         const workAreas = monitorInfos.map((monitor) => ({
           x: monitor.workArea.x,
           y: monitor.workArea.y,
@@ -551,11 +506,6 @@ export default class TesseraExtension extends Extension {
     if (this.bindingManager) {
       this.bindingManager.disable();
       this.bindingManager = null;
-    }
-
-    if (this.focusBorder) {
-      this.focusBorder.disable();
-      this.focusBorder = null;
     }
 
     this.tracker = null;

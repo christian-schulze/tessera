@@ -6,10 +6,6 @@ import type { WindowContainer } from "../tree/window-container.js";
 export interface OverflowContext {
   minTileWidth?: number;
   minTileHeight?: number;
-  gaps?: {
-    inner?: number;
-    outer?: number;
-  };
 }
 
 export interface InsertionContext {
@@ -111,28 +107,17 @@ const computeSplitRects = (container: Container, isHorizontal: boolean): void =>
     return;
   }
 
-  const inner = overflowContext.gaps?.inner ?? 0;
-  const outer = overflowContext.gaps?.outer ?? 0;
-
-  const baseRect = {
-    x: container.rect.x + outer,
-    y: container.rect.y + outer,
-    width: Math.max(0, container.rect.width - outer * 2),
-    height: Math.max(0, container.rect.height - outer * 2),
-  };
-
   const totalProportion = layoutChildren.reduce(
     (sum, child) => sum + child.proportion,
     0
   );
   const safeProportion = totalProportion > 0 ? totalProportion : 1;
 
-  const mainSize = isHorizontal ? baseRect.width : baseRect.height;
-  const totalGap = inner * (layoutChildren.length - 1);
-  const available = Math.max(0, mainSize - totalGap);
+  const mainSize = isHorizontal ? container.rect.width : container.rect.height;
+  const available = Math.max(0, mainSize);
 
   let used = 0;
-  let offset = isHorizontal ? baseRect.x : baseRect.y;
+  let offset = isHorizontal ? container.rect.x : container.rect.y;
 
   layoutChildren.forEach((child, index) => {
     const isLast = index === layoutChildren.length - 1;
@@ -148,19 +133,19 @@ const computeSplitRects = (container: Container, isHorizontal: boolean): void =>
     if (isHorizontal) {
       child.rect = {
         x: offset,
-        y: baseRect.y,
+        y: container.rect.y,
         width: size,
-        height: baseRect.height,
+        height: container.rect.height,
       };
-      offset += size + inner;
+      offset += size;
     } else {
       child.rect = {
-        x: baseRect.x,
+        x: container.rect.x,
         y: offset,
-        width: baseRect.width,
+        width: container.rect.width,
         height: size,
       };
-      offset += size + inner;
+      offset += size;
     }
   });
 };

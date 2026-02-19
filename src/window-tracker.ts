@@ -1,5 +1,5 @@
 import type MetaModule from "gi://Meta";
-import { normalizeTree, reflow } from "./tree/reflow.js";
+import { findReflowRoot, normalizeTree, reflow } from "./tree/reflow.js";
 import { Container, ContainerType, Layout } from "./tree/container.js";
 import { RootContainer } from "./tree/root-container.js";
 import { SplitContainer } from "./tree/split-container.js";
@@ -79,13 +79,11 @@ export class WindowTracker {
     this.adapter = {
       activate: () => {},
       moveResize: (window: unknown, rect) => {
-        (window as MetaWindow).move_resize_frame(
-          false,
-          rect.x,
-          rect.y,
-          rect.width,
-          rect.height
-        );
+        const mw = window as MetaWindow;
+        const before = mw.get_frame_rect();
+        const title = mw.get_title?.() ?? "?";
+        appendLog(`moveResize "${title}" before={x:${before.x},y:${before.y},w:${before.width},h:${before.height}} target={x:${rect.x},y:${rect.y},w:${rect.width},h:${rect.height}}`);
+        mw.move_resize_frame(false, rect.x, rect.y, rect.width, rect.height);
       },
       setFullscreen: () => {},
       setFloating: () => {},
@@ -252,7 +250,7 @@ export class WindowTracker {
       }
     }
 
-    reflow(split, this.getConfig().gaps);
+    reflow(split);
     applyLayout(split, this.adapter);
     this.onLayoutApplied?.();
 
@@ -308,7 +306,16 @@ export class WindowTracker {
 
     this.layoutRetries.set(windowId, 0);
     const maxAttempts = 10;
+    // While the window hasn't mapped yet (frame size is 0×0) we wait without
+    // counting down the resize-retry budget.
+    const maxWaitTicks = 150; // 15 s at 100 ms
     const intervalMs = 100;
+    // Require N consecutive matching ticks before stopping. This catches
+    // terminal emulators (e.g. VTE) that briefly accept tessera's size on
+    // mapping and then immediately resize themselves to a character-grid size.
+    const requiredConsecutiveMatches = 5; // 500 ms of stability
+    let totalTicks = 0;
+    let consecutiveMatches = 0;
 
     GLib.timeout_add(GLib.PRIORITY_DEFAULT, intervalMs, () => {
       if (!container.parent) {
@@ -316,29 +323,46 @@ export class WindowTracker {
         return GLib.SOURCE_REMOVE;
       }
 
-      const attempts = (this.layoutRetries.get(windowId) ?? 0) + 1;
-      this.layoutRetries.set(windowId, attempts);
-
+      totalTicks += 1;
       const desired = container.rect;
       const actual = window.get_frame_rect();
+
+      // Window not yet mapped — keep waiting without spending resize attempts.
+      if (actual.width === 0 && actual.height === 0) {
+        consecutiveMatches = 0;
+        if (totalTicks >= maxWaitTicks) {
+          this.layoutRetries.delete(windowId);
+          return GLib.SOURCE_REMOVE;
+        }
+        return GLib.SOURCE_CONTINUE;
+      }
+
       const matches =
         desired.x === actual.x &&
         desired.y === actual.y &&
         desired.width === actual.width &&
         desired.height === actual.height;
 
-      if (!matches) {
-        const parent = container.parent;
-        if (parent) {
-          reflow(parent, this.getConfig().gaps);
-          applyLayout(parent, this.adapter);
-          this.onLayoutApplied?.();
+      if (matches) {
+        consecutiveMatches += 1;
+        if (consecutiveMatches >= requiredConsecutiveMatches) {
+          this.layoutRetries.delete(windowId);
+          return GLib.SOURCE_REMOVE;
         }
+        return GLib.SOURCE_CONTINUE;
       }
 
-      if (matches) {
-        this.layoutRetries.delete(windowId);
-        return GLib.SOURCE_REMOVE;
+      // Mismatch — reset stability counter, count the resize attempt, reapply.
+      consecutiveMatches = 0;
+      const attempts = (this.layoutRetries.get(windowId) ?? 0) + 1;
+      this.layoutRetries.set(windowId, attempts);
+
+      const parent = container.parent;
+      if (parent) {
+        const reflowRoot = findReflowRoot(parent);
+        reflow(reflowRoot);
+        applyLayout(reflowRoot, this.adapter);
+        this.onLayoutApplied?.();
       }
 
       if (attempts >= maxAttempts) {
@@ -371,8 +395,9 @@ export class WindowTracker {
               Math.floor((workspace.rect.height - height) / 2);
             container.rect = { x, y, width, height };
             this.adapter.moveResize(window, container.rect);
-            reflow(parent, this.getConfig().gaps);
-            applyLayout(parent, this.adapter);
+            const floatReflowRoot = findReflowRoot(parent);
+            reflow(floatReflowRoot);
+            applyLayout(floatReflowRoot, this.adapter);
             this.onLayoutApplied?.();
           }
         }
@@ -433,11 +458,14 @@ export class WindowTracker {
         parent,
         removed: container,
       });
+      // Capture reflow root before normalizeTree, which may orphan `parent`
+      // by collapsing it (setting parent.parent = null) when it has one child.
+      const reflowRoot = findReflowRoot(parent);
       if (!result?.handled) {
         normalizeTree(parent);
       }
-      reflow(parent, this.getConfig().gaps);
-      applyLayout(parent, this.adapter);
+      reflow(reflowRoot);
+      applyLayout(reflowRoot, this.adapter);
       this.onLayoutApplied?.();
     }
 

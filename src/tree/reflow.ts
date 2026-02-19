@@ -1,13 +1,16 @@
 import { Container, ContainerType, Layout } from "./container.js";
 import type { WindowContainer } from "./window-container.js";
-import { getLayoutStrategy, overflowContext } from "../layout/strategy.js";
+import { getLayoutStrategy } from "../layout/strategy.js";
 
-export interface GapConfig {
-  inner?: number;
-  outer?: number;
-}
+export const findReflowRoot = (container: Container): Container => {
+  let current: Container = container;
+  while (current.parent && current.parent.type !== ContainerType.Workspace) {
+    current = current.parent;
+  }
+  return current;
+};
 
-export function reflow(container: Container, gaps?: GapConfig): void {
+export function reflow(container: Container): void {
   const { children } = container;
   if (children.length === 0) {
     return;
@@ -24,17 +27,11 @@ export function reflow(container: Container, gaps?: GapConfig): void {
     return;
   }
 
-  overflowContext.gaps = gaps;
   const strategy = getLayoutStrategy(container.layout);
   strategy.computeRects(container);
-  overflowContext.gaps = undefined;
-
-  const childGaps = gaps && gaps.outer
-    ? { inner: gaps.inner, outer: 0 }
-    : gaps;
 
   layoutChildren.forEach((child) => {
-    reflow(child, childGaps);
+    reflow(child);
   });
 }
 

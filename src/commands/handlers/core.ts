@@ -6,7 +6,7 @@ import { WorkspaceContainer } from "../../tree/workspace-container.js";
 import { WindowContainer } from "../../tree/window-container.js";
 import { applyLayout } from "../../tree/apply-layout.js";
 import { setFocusedContainer } from "../../tree/focus.js";
-import { normalizeTree, reflow } from "../../tree/reflow.js";
+import { findReflowRoot, normalizeTree, reflow } from "../../tree/reflow.js";
 
 const result = (success: boolean, message?: string): CommandResult => ({
   success,
@@ -313,11 +313,8 @@ export const moveHandler: CommandHandler = {
         if (sourceParent) {
           sourceParent.removeChild(sourceWindow);
           normalizeTree(sourceParent);
-          let reflowRoot = sourceParent;
-          if (reflowRoot.parent && reflowRoot.parent.type !== ContainerType.Workspace) {
-            reflowRoot = reflowRoot.parent;
-          }
-          reflow(reflowRoot, context.config.gaps);
+          const reflowRoot = findReflowRoot(sourceParent);
+          reflow(reflowRoot);
           applyLayout(reflowRoot, context.adapter);
         }
 
@@ -330,7 +327,7 @@ export const moveHandler: CommandHandler = {
         if (sourceWindow.floating) {
           targetWorkspace.addFloatingWindow(sourceWindow);
         }
-        reflow(split, context.config.gaps);
+        reflow(split);
         applyLayout(split, context.adapter);
         setFocusedContainer(context.root, sourceWindow);
         targetWorkspace.lastFocusedWindowId = sourceWindow.windowId;
@@ -385,15 +382,8 @@ export const moveHandler: CommandHandler = {
       normalizeTree(targetParent);
     }
 
-    let reflowRoot = sourceParent;
-    if (reflowRoot.parent && reflowRoot.parent.type !== ContainerType.Workspace) {
-      reflowRoot = reflowRoot.parent;
-    }
-    if (targetParent.parent && targetParent.parent.type !== ContainerType.Workspace) {
-      reflowRoot = targetParent.parent;
-    }
-
-    reflow(reflowRoot, context.config.gaps);
+    const reflowRoot = findReflowRoot(sourceParent);
+    reflow(reflowRoot);
     applyLayout(reflowRoot, context.adapter);
 
     return result(true);
@@ -485,8 +475,9 @@ export const resizeHandler: CommandHandler = {
 
     focused.proportion = Math.max(0.1, nextProportion);
 
-    reflow(focused.parent, context.config.gaps);
-    applyLayout(focused.parent, context.adapter);
+    const resizeReflowRoot = findReflowRoot(focused.parent);
+    reflow(resizeReflowRoot);
+    applyLayout(resizeReflowRoot, context.adapter);
 
     return result(true);
   },
@@ -503,8 +494,9 @@ export const splitHandler: CommandHandler = {
     const value = command.action === "splitv" || command.args[0] === "v";
     focused.parent.setLayout(value ? Layout.SplitV : Layout.SplitH);
 
-    reflow(focused.parent, context.config.gaps);
-    applyLayout(focused.parent, context.adapter);
+    const splitReflowRoot = findReflowRoot(focused.parent);
+    reflow(splitReflowRoot);
+    applyLayout(splitReflowRoot, context.adapter);
 
     return result(true);
   },
@@ -534,8 +526,9 @@ export const layoutHandler: CommandHandler = {
 
     focused.parent.setLayout(layout);
 
-    reflow(focused.parent, context.config.gaps);
-    applyLayout(focused.parent, context.adapter);
+    const layoutReflowRoot = findReflowRoot(focused.parent);
+    reflow(layoutReflowRoot);
+    applyLayout(layoutReflowRoot, context.adapter);
 
     return result(true);
   },
@@ -559,7 +552,7 @@ export const retileHandler: CommandHandler = {
     for (const output of context.root.children) {
       for (const workspace of output.children) {
         if (workspace instanceof WorkspaceContainer) {
-          reflow(workspace, context.config.gaps);
+          reflow(workspace);
           applyLayout(workspace, context.adapter);
         }
       }

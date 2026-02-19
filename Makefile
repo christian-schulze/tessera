@@ -3,7 +3,7 @@ INSTALL_DIR = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 REPO_DIR = $(CURDIR)
 BUILD_DIR = $(CURDIR)/dist
 
-.PHONY: help build install uninstall enable disable restart nested looking-glass lint test check logs logs-nested ipc-tree ipc-debug clean
+.PHONY: help build install uninstall enable disable nested looking-glass lint test check logs logs-nested ipc-tree ipc-debug clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -38,9 +38,6 @@ enable: ## Enable the extension
 
 disable: ## Disable the extension
 	gnome-extensions disable $(UUID)
-
-restart: build ## Rebuild and re-enable the extension
-	gnome-extensions disable $(UUID) && gnome-extensions enable $(UUID)
 
 nested: ## Launch a nested GNOME Shell session
 	@mkdir -p "$(HOME)/.local/state/tessera"
