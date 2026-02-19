@@ -24,6 +24,7 @@ import { buildTesseraService } from "./service/tessera.js";
 import { buildMonitorInfos } from "./monitors.js";
 import { buildDebugPayload } from "./ipc/debug.js";
 import { DEFAULT_CONFIG, applyConfig, loadConfig, type TesseraConfig } from "./config.js";
+import { FocusBorder } from "./focus-border.js";
 import { appendLog, writeSnapshot } from "./logging.js";
 import {
   maybeRebuildTree,
@@ -55,9 +56,21 @@ export default class TesseraExtension extends Extension {
   private config: TesseraConfig = { ...DEFAULT_CONFIG };
   private bindingManager: BindingManager | null = null;
   private commandService: CommandService | null = null;
+  private focusBorder: FocusBorder | null = null;
 
   private logToFile(message: string): void {
     appendLog(message);
+  }
+
+  private applyFocusBorderConfig(): void {
+    this.focusBorder?.destroy();
+    this.focusBorder = null;
+    const { color, width } = this.config.focusedBorder;
+    if (color && width > 0) {
+      this.focusBorder = new FocusBorder(color, width);
+      const focused = global.display.get_focus_window() as Meta.Window | null;
+      this.focusBorder.update(focused);
+    }
   }
 
   private rebuildTree(reason: string, monitorsOverride?: MonitorInfo[]): void {
@@ -83,7 +96,10 @@ export default class TesseraExtension extends Extension {
           this.commandService?.executeForTarget(command, target);
         },
         onLayoutApplied: () => {},
-        onFocusChanged: () => {},
+        onFocusChanged: () => {
+          const focused = global.display.get_focus_window() as Meta.Window | null;
+          this.focusBorder?.update(focused);
+        },
         shouldSkipWindow: (window) => {
           const metaWindow = window as Meta.Window;
           const type = metaWindow.get_window_type();
@@ -215,6 +231,7 @@ export default class TesseraExtension extends Extension {
       this.logToFile("enable start");
       this.config = loadConfig();
       this.rebuildTree("initial");
+      this.applyFocusBorderConfig();
       GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
         this.rebuildTree("idle");
         return GLib.SOURCE_REMOVE;
@@ -329,6 +346,7 @@ export default class TesseraExtension extends Extension {
           if (this.bindingManager) {
             reloadBindings(this.bindingManager, this.config);
           }
+          this.applyFocusBorderConfig();
           if (typeof Main.notify === "function") {
             Main.notify("Tessera", "Configuration reloaded");
           }
@@ -512,6 +530,8 @@ export default class TesseraExtension extends Extension {
     this.root = null;
     this.ipcServer = null;
     this.commandService = null;
+    this.focusBorder?.destroy();
+    this.focusBorder = null;
     (globalThis as unknown as { __tessera?: TesseraGlobal }).__tessera =
       undefined;
   }

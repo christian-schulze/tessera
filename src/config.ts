@@ -3,6 +3,11 @@ import { buildDefaultBindingModes } from "./bindings/defaults.js";
 
 export type AlternatingMode = "focused" | "tail";
 
+export type FocusedBorderConfig = {
+  color: string;
+  width: number;
+};
+
 export type RuleCriteria = {
   app_id?: string;
   title?: string;
@@ -23,6 +28,7 @@ export type TesseraConfig = {
   rules: ForWindowRule[];
   workspaceOutputs: WorkspaceOutputMap;
   exec: string[];
+  focusedBorder: FocusedBorderConfig;
 };
 
 export const DEFAULT_CONFIG: TesseraConfig = {
@@ -33,6 +39,7 @@ export const DEFAULT_CONFIG: TesseraConfig = {
   rules: [],
   workspaceOutputs: {},
   exec: [],
+  focusedBorder: { color: "", width: 0 },
 };
 
 const normalizeMinTileWidth = (value: unknown): number | null => {
@@ -200,6 +207,22 @@ const normalizeWorkspaceOutputs = (value: unknown): WorkspaceOutputMap | null =>
   return hasValid ? map : null;
 };
 
+const normalizeFocusedBorder = (value: unknown): FocusedBorderConfig | null => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const candidate = value as { color?: unknown; width?: unknown };
+
+  const color = typeof candidate.color === "string" ? candidate.color.trim() : "";
+  const width =
+    typeof candidate.width === "number" && Number.isFinite(candidate.width) && candidate.width > 0
+      ? Math.floor(candidate.width)
+      : 0;
+
+  return { color, width };
+};
+
 const normalizeExec = (value: unknown): string[] | null => {
   if (!Array.isArray(value)) {
     return null;
@@ -255,6 +278,11 @@ export const applyConfig = (
   const exec = normalizeExec(candidate.exec);
   if (exec !== null) {
     target.exec = exec;
+  }
+
+  const focusedBorder = normalizeFocusedBorder(candidate.focusedBorder);
+  if (focusedBorder !== null) {
+    target.focusedBorder = focusedBorder;
   }
 
   return target;
