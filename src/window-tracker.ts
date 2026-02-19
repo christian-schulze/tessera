@@ -422,6 +422,20 @@ export class WindowTracker {
     return null;
   }
 
+  private scanForFloatingWorkspace(container: WindowContainer): WorkspaceContainer | null {
+    for (const output of this.root.children) {
+      for (const ws of output.children) {
+        if (ws.type === ContainerType.Workspace) {
+          const workspace = ws as WorkspaceContainer;
+          if (workspace.getFloatingWindows().includes(container)) {
+            return workspace;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   private detachWindowSignals(windowId: number): void {
     const container = this.windowMap.get(windowId);
     const signals = this.windowSignals.get(windowId);
@@ -442,9 +456,18 @@ export class WindowTracker {
       return;
     }
 
+    // Find the workspace while parent is still set, before removeChild clears it
+    const floatingWorkspace = container.floating
+      ? (this.findWorkspace(container) ?? this.scanForFloatingWorkspace(container))
+      : null;
+
     const parent = container.parent;
     if (parent) {
       parent.removeChild(container);
+    }
+
+    if (floatingWorkspace) {
+      floatingWorkspace.removeFloatingWindow(container);
     }
 
     this.detachWindowSignals(windowId);
