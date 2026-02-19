@@ -32,6 +32,41 @@ export const getLogPath = (): string => {
   return `${getStateDir()}/tessera/tessera.log`;
 };
 
+export const getSnapshotPath = (name: string): string => {
+  const GLib = getGLib();
+  if (GLib) {
+    return GLib.build_filenamev([getStateDir(), "tessera", `${name}.log`]);
+  }
+  return `${getStateDir()}/tessera/${name}.log`;
+};
+
+export const writeSnapshot = (name: string, data: unknown): void => {
+  const GLib = getGLib();
+  if (!GLib) {
+    return;
+  }
+  try {
+    const path = getSnapshotPath(name);
+    const dir = GLib.path_get_dirname(path);
+    GLib.mkdir_with_parents(dir, 0o755);
+
+    let existing = "";
+    try {
+      const [ok, contents] = GLib.file_get_contents(path);
+      if (ok && contents) {
+        existing = new TextDecoder().decode(contents as unknown as Uint8Array);
+      }
+    } catch {
+      // file does not exist yet
+    }
+
+    const entry = `[${new Date().toISOString()}] ${JSON.stringify(data)}\n`;
+    GLib.file_set_contents(path, existing + entry);
+  } catch (error) {
+    appendLog(`writeSnapshot(${name}) failed: ${error}`);
+  }
+};
+
 export const appendLog = (message: string): void => {
   const GLib = getGLib();
   if (!GLib) {

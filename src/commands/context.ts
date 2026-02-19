@@ -11,4 +11,6 @@ export interface CommandContext {
   reloadConfig?: () => void;
   switchMode?: (name: string) => boolean;
   logger?: (message: string) => void;
+  dumpDebug?: () => void;
+  dumpTree?: () => void;
 }

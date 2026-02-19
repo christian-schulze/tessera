@@ -17,7 +17,7 @@ import {
   unmarkHandler,
   workspaceHandler,
 } from "./handlers/workspace.js";
-import { execCaptureHandler, execHandler, killHandler, reloadHandler } from "./handlers/process.js";
+import { dumpHandler, execCaptureHandler, execHandler, killHandler, reloadHandler } from "./handlers/process.js";
 import type { Container } from "../tree/container.js";
 
 const aliasHandler = (action: string, handler: CommandHandler): CommandHandler => ({
@@ -47,6 +47,7 @@ export const registerDefaultHandlers = (engine: CommandEngine): void => {
   engine.register(execCaptureHandler);
   engine.register(killHandler);
   engine.register(reloadHandler);
+  engine.register(dumpHandler);
 };
 
 export const findFocusedContainer = (container: Container): Container | null => {

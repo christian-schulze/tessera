@@ -103,6 +103,8 @@ When `modes` is omitted or `null`, these defaults are used:
 | `Super+Shift+Q` | Close focused window |
 | `Super+Shift+R` | Reload config |
 | `Super+Shift+T` | Retile (reapply layout to all windows) |
+| `Super+Shift+D` | Dump debug snapshot to `~/.local/state/tessera/debug.log` |
+| `Super+Shift+I` | Dump tree snapshot to `~/.local/state/tessera/tree.log` |
 | `Super+R` | Enter resize mode |
 | `Super+1`..`9` | Switch to workspace 1-9 |
 | `Super+0` | Switch to workspace 10 |
@@ -210,6 +212,28 @@ bunx tsx scripts/ipc-run.ts execute "reload"
 ```
 
 Note: `exec` commands only run on initial enable, not on reload.
+
+## Debug Snapshots
+
+Press `Super+Shift+D` or `Super+Shift+I` to write a timestamped JSON snapshot of the current debug info or container tree to a log file:
+
+| Binding | File |
+| ------- | ---- |
+| `Super+Shift+D` | `~/.local/state/tessera/debug.log` |
+| `Super+Shift+I` | `~/.local/state/tessera/tree.log` |
+
+Each keypress appends one line in the format:
+
+```
+[2026-02-19T12:34:56.789Z] { ...json payload... }
+```
+
+The same snapshots can be triggered via IPC:
+
+```bash
+bunx tsx scripts/ipc-run.ts execute "dump debug"
+bunx tsx scripts/ipc-run.ts execute "dump tree"
+```
 
 ## Retile
 

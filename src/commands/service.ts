@@ -17,6 +17,8 @@ export interface CommandServiceDeps {
   getFocused?: (root: RootContainer) => Container | null;
   logger?: (message: string) => void;
   onAfterExecute?: () => void;
+  dumpDebug?: () => void;
+  dumpTree?: () => void;
 }
 
 export interface CommandService {
@@ -43,6 +45,8 @@ export function buildCommandService(deps: CommandServiceDeps): CommandService {
       reloadConfig: deps.reloadConfig,
       switchMode: deps.switchMode,
       logger: deps.logger,
+      dumpDebug: deps.dumpDebug,
+      dumpTree: deps.dumpTree,
     });
   };
 

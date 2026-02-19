@@ -63,3 +63,25 @@ export const reloadHandler: CommandHandler = {
     return result(true);
   },
 };
+
+export const dumpHandler: CommandHandler = {
+  action: "dump",
+  execute: (command, context) => {
+    const target = command.args[0];
+    if (target === "debug") {
+      if (!context.dumpDebug) {
+        return result(false, "Dump debug is unavailable");
+      }
+      context.dumpDebug();
+      return result(true);
+    }
+    if (target === "tree") {
+      if (!context.dumpTree) {
+        return result(false, "Dump tree is unavailable");
+      }
+      context.dumpTree();
+      return result(true);
+    }
+    return result(false, "Usage: dump debug|tree");
+  },
+};

@@ -37,6 +37,8 @@ export const buildDefaultBindingModes = (): BindingMode[] => [
       { keys: ["<Super><Shift>q"], command: "kill" },
       { keys: ["<Super><Shift>r"], command: "reload" },
       { keys: ["<Super><Shift>t"], command: "retile" },
+      { keys: ["<Super><Shift>d"], command: "dump debug" },
+      { keys: ["<Super><Shift>i"], command: "dump tree" },
       { keys: ["<Super>r"], command: "mode \"resize\"" },
       ...workspaceBindings(),
     ],

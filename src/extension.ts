@@ -28,7 +28,7 @@ import { buildMonitorInfos } from "./monitors.js";
 import { buildDebugPayload } from "./ipc/debug.js";
 import { DEFAULT_CONFIG, applyConfig, loadConfig, type TesseraConfig } from "./config.js";
 import { FocusBorder } from "./focus-border.js";
-import { appendLog } from "./logging.js";
+import { appendLog, writeSnapshot } from "./logging.js";
 import {
   maybeRebuildTree,
   shouldContinuePolling,
@@ -482,6 +482,19 @@ export default class TesseraExtension extends Extension {
         }),
         getDebug: buildDebug,
       });
+
+      commandServiceDeps.dumpDebug = () => {
+        writeSnapshot("debug", tesseraService.debug());
+        if (typeof Main.notify === "function") {
+          Main.notify("Tessera", "Debug snapshot written to debug.log");
+        }
+      };
+      commandServiceDeps.dumpTree = () => {
+        writeSnapshot("tree", tesseraService.tree());
+        if (typeof Main.notify === "function") {
+          Main.notify("Tessera", "Tree snapshot written to tree.log");
+        }
+      };
 
       if (GLib.getenv("TESSERA_IPC") === "1") {
         this.ipcServer = new IpcServer();
