@@ -1,6 +1,7 @@
 import type Meta from "gi://Meta";
 import type { Container } from "./tree/container.js";
 import type { WindowContainer } from "./tree/window-container.js";
+import { ContainerType } from "./tree/container.js";
 import { WorkspaceContainer } from "./tree/workspace-container.js";
 import { findWorkspaceByIndex, getWorkspaceIndexFromWindow } from "./window-workspace.js";
 import { setFocusedContainer } from "./tree/focus.js";
@@ -18,6 +19,7 @@ export const updateFocusedWindow = (
   windowMap: Map<number, WindowContainer>,
   focusedWindow: Meta.Window | null
 ): void => {
+  let visibleWorkspace: WorkspaceContainer | null = null;
   if (!focusedWindow) {
     setFocusedContainer(root, null);
     return;
@@ -43,7 +45,21 @@ export const updateFocusedWindow = (
       }
     }
     if (workspace) {
+      visibleWorkspace = workspace;
       workspace.lastFocusedWindowId = windowId;
+    }
+  }
+
+  if (visibleWorkspace) {
+    for (const output of root.children) {
+      if (output.type !== ContainerType.Output) {
+        continue;
+      }
+      for (const child of output.children) {
+        if (child instanceof WorkspaceContainer) {
+          child.visible = child === visibleWorkspace;
+        }
+      }
     }
   }
 };
