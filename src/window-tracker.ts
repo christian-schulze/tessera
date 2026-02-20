@@ -445,12 +445,21 @@ export class WindowTracker {
             (child) => child.type === ContainerType.Window &&
               !(child as WindowContainer).floating
           ).length;
+          // Apply a 1px tolerance: if actual dimensions are within 1px of
+          // desired (the common case with integer pixel rounding, e.g. Vivaldi
+          // minimum 1297px vs allocated 1296px), treat them as matching so the
+          // window is not incorrectly promoted to floating.
+          const toleratedActual = {
+            ...actual,
+            width: Math.abs(actual.width - desired.width) <= 1 ? desired.width : actual.width,
+            height: Math.abs(actual.height - desired.height) <= 1 ? desired.height : actual.height,
+          };
           const shouldFloat = getLayoutStrategy(parent.layout).shouldFloatOnRetry(
             workspace.rect,
             tiledCount,
             minTileWidth,
             minTileHeight,
-            actual
+            toleratedActual
           );
 
           if (shouldFloat) {
