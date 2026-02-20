@@ -11,6 +11,7 @@ import { ContainerType } from "./tree/container.js";
 import { WindowTracker } from "./window-tracker.js";
 import {
   buildCommandEngine,
+  findFocusedContainer,
   registerDefaultHandlers,
 } from "./commands/index.js";
 import type { CommandServiceDeps, CommandService } from "./commands/service.js";
@@ -25,6 +26,8 @@ import { buildMonitorInfos } from "./monitors.js";
 import { buildDebugPayload } from "./ipc/debug.js";
 import { DEFAULT_CONFIG, applyConfig, loadConfig, type TesseraConfig } from "./config.js";
 import { FocusBorder } from "./focus-border.js";
+import { InspectOverlay } from "./inspect-overlay.js";
+import { WindowContainer } from "./tree/window-container.js";
 import { appendLog, writeSnapshot } from "./logging.js";
 import {
   maybeRebuildTree,
@@ -57,6 +60,7 @@ export default class TesseraExtension extends Extension {
   private bindingManager: BindingManager | null = null;
   private commandService: CommandService | null = null;
   private focusBorder: FocusBorder | null = null;
+  private inspectOverlay: InspectOverlay | null = null;
 
   private logToFile(message: string): void {
     appendLog(message);
@@ -71,6 +75,11 @@ export default class TesseraExtension extends Extension {
       const focused = global.display.get_focus_window() as Meta.Window | null;
       this.focusBorder.update(focused);
     }
+  }
+
+  private applyInspectOverlayConfig(): void {
+    this.inspectOverlay?.destroy();
+    this.inspectOverlay = new InspectOverlay(this.config.inspectOverlay);
   }
 
   private rebuildTree(reason: string, monitorsOverride?: MonitorInfo[]): void {
@@ -99,6 +108,7 @@ export default class TesseraExtension extends Extension {
         onFocusChanged: () => {
           const focused = global.display.get_focus_window() as Meta.Window | null;
           this.focusBorder?.update(focused);
+          this.inspectOverlay?.hide();
         },
         shouldSkipWindow: (window) => {
           const metaWindow = window as Meta.Window;
@@ -233,6 +243,7 @@ export default class TesseraExtension extends Extension {
       this.config = loadConfig();
       this.rebuildTree("initial");
       this.applyFocusBorderConfig();
+      this.applyInspectOverlayConfig();
       GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
         this.rebuildTree("idle");
         return GLib.SOURCE_REMOVE;
@@ -348,6 +359,7 @@ export default class TesseraExtension extends Extension {
             reloadBindings(this.bindingManager, this.config);
           }
           this.applyFocusBorderConfig();
+          this.applyInspectOverlayConfig();
           if (typeof Main.notify === "function") {
             Main.notify("Tessera", "Configuration reloaded");
           }
@@ -476,6 +488,16 @@ export default class TesseraExtension extends Extension {
           Main.notify("Tessera", "Tree snapshot written to tree.log");
         }
       };
+      commandServiceDeps.toggleInspect = () => {
+        const root = this.root;
+        if (!root) {
+          return;
+        }
+        const focused = findFocusedContainer(root);
+        if (focused instanceof WindowContainer) {
+          this.inspectOverlay?.toggle(focused);
+        }
+      };
 
       if (GLib.getenv("TESSERA_IPC") === "1") {
         this.ipcServer = new IpcServer();
@@ -533,6 +555,8 @@ export default class TesseraExtension extends Extension {
     this.commandService = null;
     this.focusBorder?.destroy();
     this.focusBorder = null;
+    this.inspectOverlay?.destroy();
+    this.inspectOverlay = null;
     (globalThis as unknown as { __tessera?: TesseraGlobal }).__tessera =
       undefined;
   }

@@ -8,6 +8,12 @@ export type FocusedBorderConfig = {
   width: number;
 };
 
+export type InspectOverlayConfig = {
+  textColor: string;
+  headerColor: string;
+  background: string;
+};
+
 export type RuleCriteria = {
   app_id?: string;
   title?: string;
@@ -30,6 +36,7 @@ export type TesseraConfig = {
   workspaceOutputs: WorkspaceOutputMap;
   exec: string[];
   focusedBorder: FocusedBorderConfig;
+  inspectOverlay: InspectOverlayConfig;
 };
 
 export const DEFAULT_CONFIG: TesseraConfig = {
@@ -41,6 +48,11 @@ export const DEFAULT_CONFIG: TesseraConfig = {
   workspaceOutputs: {},
   exec: [],
   focusedBorder: { color: "", width: 0 },
+  inspectOverlay: {
+    textColor: "#39ff14",
+    headerColor: "#1aab00",
+    background: "rgba(0,0,0,0.52)",
+  },
 };
 
 const normalizeMinTileWidth = (value: unknown): number | null => {
@@ -227,6 +239,31 @@ const normalizeFocusedBorder = (value: unknown): FocusedBorderConfig | null => {
   return { color, width };
 };
 
+const normalizeInspectOverlay = (value: unknown): InspectOverlayConfig | null => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const candidate = value as { textColor?: unknown; headerColor?: unknown; background?: unknown };
+
+  const textColor =
+    typeof candidate.textColor === "string" && candidate.textColor.trim()
+      ? candidate.textColor.trim()
+      : DEFAULT_CONFIG.inspectOverlay.textColor;
+
+  const headerColor =
+    typeof candidate.headerColor === "string" && candidate.headerColor.trim()
+      ? candidate.headerColor.trim()
+      : DEFAULT_CONFIG.inspectOverlay.headerColor;
+
+  const background =
+    typeof candidate.background === "string" && candidate.background.trim()
+      ? candidate.background.trim()
+      : DEFAULT_CONFIG.inspectOverlay.background;
+
+  return { textColor, headerColor, background };
+};
+
 const normalizeExec = (value: unknown): string[] | null => {
   if (!Array.isArray(value)) {
     return null;
@@ -287,6 +324,11 @@ export const applyConfig = (
   const focusedBorder = normalizeFocusedBorder(candidate.focusedBorder);
   if (focusedBorder !== null) {
     target.focusedBorder = focusedBorder;
+  }
+
+  const inspectOverlay = normalizeInspectOverlay(candidate.inspectOverlay);
+  if (inspectOverlay !== null) {
+    target.inspectOverlay = inspectOverlay;
   }
 
   return target;

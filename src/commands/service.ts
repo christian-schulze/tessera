@@ -19,6 +19,7 @@ export interface CommandServiceDeps {
   onAfterExecute?: () => void;
   dumpDebug?: () => void;
   dumpTree?: () => void;
+  toggleInspect?: () => void;
 }
 
 export interface CommandService {
@@ -47,6 +48,7 @@ export function buildCommandService(deps: CommandServiceDeps): CommandService {
       logger: deps.logger,
       dumpDebug: deps.dumpDebug,
       dumpTree: deps.dumpTree,
+      toggleInspect: deps.toggleInspect,
     });
   };
 

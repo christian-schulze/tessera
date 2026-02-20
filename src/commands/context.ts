@@ -13,4 +13,5 @@ export interface CommandContext {
   logger?: (message: string) => void;
   dumpDebug?: () => void;
   dumpTree?: () => void;
+  toggleInspect?: () => void;
 }

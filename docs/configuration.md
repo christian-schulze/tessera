@@ -39,6 +39,14 @@ module.exports = {
     width: 2,         // border width in pixels (default: 0)
   },
 
+  // Colours for the Super+I inspect overlay.
+  // All values are CSS color strings; omit the key to keep the default.
+  inspectOverlay: {
+    textColor:    "#39ff14",          // main text (default: neon green)
+    headerColor:  "#1aab00",          // section headers (default: dimmer green)
+    background:   "rgba(0,0,0,0.52)", // panel background (default: semi-transparent black)
+  },
+
   // Keybinding modes. When present, replaces all default keybindings.
   // Set to null (or omit) to use defaults.
   modes: [
@@ -101,6 +109,7 @@ When `modes` is omitted or `null`, these defaults are used:
 | `Super+V` | Split vertical |
 | `Super+E` | Toggle split layout |
 | `Super+F` | Toggle fullscreen |
+| `Super+I` | Show/hide window inspect overlay |
 | `Super+Shift+Q` | Close focused window |
 | `Super+Shift+R` | Reload config |
 | `Super+Shift+T` | Retile (reapply layout to all windows) |
