@@ -45,6 +45,7 @@ export class WindowTracker {
   private root: RootContainer;
   private windowMap: Map<number, WindowContainer>;
   private windowSignals: Map<number, number[]>;
+  private trackerSignals: Map<number, number>;
   private displaySignal: number | null;
   private focusSignal: number | null;
   private adapter: WindowAdapter;
@@ -73,6 +74,7 @@ export class WindowTracker {
     this.shouldSkipWindow = options?.shouldSkipWindow ?? null;
     this.windowMap = new Map();
     this.windowSignals = new Map();
+    this.trackerSignals = new Map();
     this.displaySignal = null;
     this.focusSignal = null;
     this.layoutRetries = new Map();
@@ -295,6 +297,19 @@ export class WindowTracker {
     );
 
     this.windowSignals.set(windowId, signalIds);
+
+    if (Shell && container.appId.startsWith("window:")) {
+      const tracker = Shell.WindowTracker.get_default();
+      const trackerSignalId = tracker.connect("tracked-windows-changed", () => {
+        const resolved = this.getAppId(window);
+        if (!resolved.startsWith("window:")) {
+          container.appId = resolved;
+          tracker.disconnect(trackerSignalId);
+          this.trackerSignals.delete(windowId);
+        }
+      });
+      this.trackerSignals.set(windowId, trackerSignalId);
+    }
   }
 
   private scheduleLayoutRetry(container: WindowContainer): void {
@@ -448,6 +463,12 @@ export class WindowTracker {
     }
 
     this.windowSignals.delete(windowId);
+
+    const trackerSignalId = this.trackerSignals.get(windowId);
+    if (Shell && trackerSignalId !== undefined) {
+      Shell.WindowTracker.get_default().disconnect(trackerSignalId);
+      this.trackerSignals.delete(windowId);
+    }
   }
 
   private handleWindowRemoved(windowId: number): void {
