@@ -253,8 +253,30 @@ export class WindowTracker {
     if (rules.length > 0 && this.executeForTarget) {
       const ruleCommands = evaluateRules(rules, container);
       appendLog(`rules: matched commands=[${ruleCommands.join(", ")}]`);
-      for (const cmd of ruleCommands) {
-        this.executeForTarget(cmd, container);
+      if (ruleCommands.length > 0) {
+        const executeForTarget = this.executeForTarget;
+        const runRules = () => {
+          if (container.parent) {
+            for (const cmd of ruleCommands) {
+              executeForTarget(cmd, container);
+            }
+          }
+        };
+        // Defer rule execution past GNOME Shell's _mapWindow animation
+        // (~250 ms). The animation completion calls window.activate(), which
+        // switches to the window's workspace. By delaying until after the
+        // animation, the window is still on the original workspace when
+        // _mapWindow activates it, so no workspace switch occurs. The
+        // subsequent move (change_workspace_by_index) then behaves exactly
+        // like a manual keybinding move, which already works correctly.
+        if (GLib) {
+          GLib.timeout_add(GLib.PRIORITY_DEFAULT, 300, () => {
+            runRules();
+            return GLib.SOURCE_REMOVE;
+          });
+        } else {
+          runRules();
+        }
       }
     }
 
@@ -321,8 +343,23 @@ export class WindowTracker {
           if (rules.length > 0 && this.executeForTarget) {
             const ruleCommands = evaluateRules(rules, container);
             appendLog(`rules (deferred): matched commands=[${ruleCommands.join(", ")}]`);
-            for (const cmd of ruleCommands) {
-              this.executeForTarget(cmd, container);
+            if (ruleCommands.length > 0) {
+              const executeForTarget = this.executeForTarget;
+              const runRules = () => {
+                if (container.parent) {
+                  for (const cmd of ruleCommands) {
+                    executeForTarget(cmd, container);
+                  }
+                }
+              };
+              if (GLib) {
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 300, () => {
+                  runRules();
+                  return GLib.SOURCE_REMOVE;
+                });
+              } else {
+                runRules();
+              }
             }
           }
         }
