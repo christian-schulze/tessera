@@ -221,7 +221,18 @@ const alternatingStrategy: LayoutStrategy = {
     if (context.mode === "focused" && !isDescendantOf(context.parent, context.focused)) {
       const tailPlan = tailPlanFor(context.parent);
       if (!tailPlan) {
-        return null;
+        // No SplitH/SplitV found yet (e.g. session restore opens windows without
+        // focus). If there are tiled children, wrap the last one in SplitH —
+        // the first alternating level is always horizontal.
+        const tiledChildren = layoutChildrenFor(context.parent);
+        if (tiledChildren.length === 0) {
+          return null;
+        }
+        return {
+          container: context.parent,
+          wrapLayout: Layout.SplitH,
+          wrapTarget: tiledChildren[tiledChildren.length - 1],
+        };
       }
 
       return {
@@ -234,7 +245,15 @@ const alternatingStrategy: LayoutStrategy = {
     if (context.mode === "tail") {
       const tailPlan = tailPlanFor(context.parent);
       if (!tailPlan) {
-        return null;
+        const tiledChildren = layoutChildrenFor(context.parent);
+        if (tiledChildren.length === 0) {
+          return null;
+        }
+        return {
+          container: context.parent,
+          wrapLayout: Layout.SplitH,
+          wrapTarget: tiledChildren[tiledChildren.length - 1],
+        };
       }
 
       return {
