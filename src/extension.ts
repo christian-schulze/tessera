@@ -115,7 +115,8 @@ export default class TesseraExtension extends Extension {
             type === Meta.WindowType.COMBO ||
             type === Meta.WindowType.DND ||
             type === Meta.WindowType.DIALOG ||
-            type === Meta.WindowType.MODAL_DIALOG
+            type === Meta.WindowType.MODAL_DIALOG ||
+            type === Meta.WindowType.OVERRIDE_OTHER
           ) {
             return true;
           }

@@ -68,7 +68,8 @@ module.exports = {
   // Window rules evaluated when a window is first tracked.
   // Rules are processed in order; last write wins for conflicting properties.
   rules: [
-    { match: { app_id: "firefox" }, commands: ["move container to workspace 2"] },
+    // Move all Firefox windows to workspace 2, but only normal windows (not dialogs)
+    { match: { app_id: "firefox", window_type: "0" }, commands: ["move container to workspace 2"] },
     { match: { title: "Picture-in-Picture" }, commands: ["floating enable"] },
     { match: { app_id: "org.gnome.Nautilus" }, commands: ["floating enable"] },
   ],
@@ -157,8 +158,29 @@ Rules are evaluated once when a window is first tracked. Each rule has a `match`
 
 - `app_id` — matches the application's desktop ID (e.g., `"firefox"`, `"org.gnome.Nautilus"`)
 - `title` — matches the window title exactly
+- `window_type` — matches the Mutter window type as a numeric string
 
-Both fields are optional but at least one must be present. When both are specified, both must match.
+All fields are optional but at least one must be present. When multiple fields are specified, all must match (AND logic).
+
+#### `window_type` values
+
+| Value | Type | Description |
+| ----- | ---- | ----------- |
+| `"0"` | NORMAL | Regular application window |
+| `"3"` | DIALOG | Dialog (transient child window) |
+| `"4"` | MODAL_DIALOG | Modal dialog |
+| `"7"` | UTILITY | Utility/tool window |
+| `"8"` | SPLASHSCREEN | Splash screen |
+| `"11"` | TOOLTIP | Tooltip |
+| `"12"` | NOTIFICATION | Notification |
+| `"15"` | OVERRIDE_OTHER | X11 override-redirect window (bypasses WM) |
+
+Most rules should target `window_type: "0"` to avoid matching dialogs and popups that share the same `app_id` as the parent application. For example, a file-open dialog opened by `"org.gnome.Nautilus"` would otherwise match a rule that only specifies `app_id: "org.gnome.Nautilus"`.
+
+```js
+// Correct: targets only normal Nautilus windows, not its dialogs
+{ match: { app_id: "org.gnome.Nautilus", window_type: "0" }, commands: ["floating enable"] }
+```
 
 ### Finding app_id Values
 

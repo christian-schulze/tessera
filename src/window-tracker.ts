@@ -190,12 +190,16 @@ export class WindowTracker {
 
     const appId = this.getAppId(window);
     const title = window.get_title() ?? "";
+    const windowType = typeof window.get_window_type === "function"
+      ? (window.get_window_type() as number)
+      : 0;
     const container = new WindowContainer(
       this.root.nextId(),
       window,
       windowId,
       appId,
-      title
+      title,
+      windowType
     );
 
     const split = this.findSplitTarget(workspace);

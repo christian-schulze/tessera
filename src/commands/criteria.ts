@@ -89,6 +89,11 @@ const matchesCriterion = (container: Container, criterion: CommandCriteria): boo
         return false;
       }
       return evaluateBoolean(!container.floating, criterion.operator, criterion.value);
+    case "window_type":
+      if (!(container instanceof WindowContainer)) {
+        return false;
+      }
+      return evaluateString(String(container.window_type), criterion.operator, criterion.value);
     case "urgent":
       if (!(container instanceof WorkspaceContainer)) {
         return false;

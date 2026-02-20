@@ -2,8 +2,8 @@ import { evaluateRules } from "../../src/rules.ts";
 import { WindowContainer } from "../../src/tree/window-container.ts";
 import type { ForWindowRule } from "../../src/config.ts";
 
-const makeWindow = (appId: string, title: string): WindowContainer => {
-  const container = new WindowContainer(1, {}, 100, appId, title);
+const makeWindow = (appId: string, title: string, window_type = 0): WindowContainer => {
+  const container = new WindowContainer(1, {}, 100, appId, title, window_type);
   return container;
 };
 
@@ -61,6 +61,17 @@ describe("evaluateRules", () => {
     const container = makeWindow("firefox", "Mozilla Firefox");
     const commands = evaluateRules(rules, container);
     expect(commands).toEqual(["move container to workspace 2", "floating enable"]);
+  });
+
+  it("matches by window_type", () => {
+    const rules: ForWindowRule[] = [
+      { match: { app_id: "firefox", window_type: "0" }, commands: ["floating enable"] },
+    ];
+    const normal = makeWindow("firefox", "Mozilla Firefox", 0);
+    const dialog = makeWindow("firefox", "Open File", 3);
+
+    expect(evaluateRules(rules, normal)).toEqual(["floating enable"]);
+    expect(evaluateRules(rules, dialog)).toEqual([]);
   });
 
   it("returns empty array when rules list is empty", () => {

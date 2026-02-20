@@ -14,6 +14,10 @@ const ruleToCriteria = (match: ForWindowRule["match"]): CommandCriteria[] => {
     criteria.push({ key: "title", operator: "=", value: match.title });
   }
 
+  if (match.window_type !== undefined) {
+    criteria.push({ key: "window_type", operator: "=", value: match.window_type });
+  }
+
   return criteria;
 };
 

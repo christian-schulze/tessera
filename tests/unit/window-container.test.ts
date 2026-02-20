@@ -39,6 +39,7 @@ describe("WindowContainer", () => {
       windowId: 99,
       appId: "app.test",
       title: "Title",
+      window_type: 0,
       floating: true,
       fullscreen: true,
     });

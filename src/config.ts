@@ -11,6 +11,7 @@ export type FocusedBorderConfig = {
 export type RuleCriteria = {
   app_id?: string;
   title?: string;
+  window_type?: string;
 };
 
 export type ForWindowRule = {
@@ -166,7 +167,7 @@ const normalizeRules = (value: unknown): ForWindowRule[] | null => {
       continue;
     }
 
-    const match = candidate.match as { app_id?: unknown; title?: unknown };
+    const match = candidate.match as { app_id?: unknown; title?: unknown; window_type?: unknown };
     const criteria: RuleCriteria = {};
     if (typeof match.app_id === "string") {
       criteria.app_id = match.app_id;
@@ -174,8 +175,11 @@ const normalizeRules = (value: unknown): ForWindowRule[] | null => {
     if (typeof match.title === "string") {
       criteria.title = match.title;
     }
+    if (typeof match.window_type === "string") {
+      criteria.window_type = match.window_type;
+    }
 
-    if (!criteria.app_id && !criteria.title) {
+    if (!criteria.app_id && !criteria.title && !criteria.window_type) {
       continue;
     }
 
