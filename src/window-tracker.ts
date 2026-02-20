@@ -245,8 +245,10 @@ export class WindowTracker {
     }
 
     const { rules } = this.getConfig();
+    appendLog(`rules: count=${rules.length} appId="${container.appId}" title="${container.title}" hasExecutor=${!!this.executeForTarget}`);
     if (rules.length > 0 && this.executeForTarget) {
       const ruleCommands = evaluateRules(rules, container);
+      appendLog(`rules: matched commands=[${ruleCommands.join(", ")}]`);
       for (const cmd of ruleCommands) {
         this.executeForTarget(cmd, container);
       }
@@ -306,6 +308,19 @@ export class WindowTracker {
           container.appId = resolved;
           tracker.disconnect(trackerSignalId);
           this.trackerSignals.delete(windowId);
+
+          // Re-evaluate rules now that the real appId is known.
+          // Rules couldn't match during trackWindow() because the appId
+          // was still a placeholder ("window:N") at that time.
+          const { rules } = this.getConfig();
+          appendLog(`rules (deferred): appId="${resolved}" count=${rules.length} hasExecutor=${!!this.executeForTarget}`);
+          if (rules.length > 0 && this.executeForTarget) {
+            const ruleCommands = evaluateRules(rules, container);
+            appendLog(`rules (deferred): matched commands=[${ruleCommands.join(", ")}]`);
+            for (const cmd of ruleCommands) {
+              this.executeForTarget(cmd, container);
+            }
+          }
         }
       });
       this.trackerSignals.set(windowId, trackerSignalId);

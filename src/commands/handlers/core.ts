@@ -7,6 +7,7 @@ import { WindowContainer } from "../../tree/window-container.js";
 import { applyLayout } from "../../tree/apply-layout.js";
 import { setFocusedContainer } from "../../tree/focus.js";
 import { findReflowRoot, normalizeTree, reflow } from "../../tree/reflow.js";
+import { appendLog } from "../../logging.js";
 
 const result = (success: boolean, message?: string): CommandResult => ({
   success,
@@ -307,13 +308,16 @@ export const moveHandler: CommandHandler = {
       }
       const currentWorkspace = findWorkspaceForContainer(sourceWindow);
       const targetWorkspace = findWorkspaceByNumber(context.root, index);
+      appendLog(`move-to-workspace: index=${index} found=${!!targetWorkspace} rootChildren=${context.root.children.length}`);
 
       if (targetWorkspace) {
         const sourceParent = sourceWindow.parent;
         if (sourceParent) {
+          // Capture reflow root before normalizeTree, which may orphan sourceParent
+          // by collapsing it (setting sourceParent.parent = null) when it has one child.
+          const reflowRoot = findReflowRoot(sourceParent);
           sourceParent.removeChild(sourceWindow);
           normalizeTree(sourceParent);
-          const reflowRoot = findReflowRoot(sourceParent);
           reflow(reflowRoot);
           applyLayout(reflowRoot, context.adapter);
         }
@@ -333,8 +337,7 @@ export const moveHandler: CommandHandler = {
         targetWorkspace.lastFocusedWindowId = sourceWindow.windowId;
       }
 
-      context.adapter.moveToWorkspace(sourceWindow.window, index - 1, true);
-      context.adapter.activate(sourceWindow.window);
+      context.adapter.moveToWorkspace(sourceWindow.window, index - 1, false);
       return result(true);
     }
 

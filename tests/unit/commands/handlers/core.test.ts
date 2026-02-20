@@ -175,7 +175,7 @@ describe("Core command handlers", () => {
     );
 
     expect(result.success).toBeTrue();
-    expect(adapter.movedTo).toEqual([{ window, index: 1, focus: true }]);
+    expect(adapter.movedTo).toEqual([{ window, index: 1, focus: false }]);
   });
 
   it("move container to workspace updates tree", () => {
