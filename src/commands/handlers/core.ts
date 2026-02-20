@@ -8,6 +8,7 @@ import { applyLayout } from "../../tree/apply-layout.js";
 import { setFocusedContainer } from "../../tree/focus.js";
 import { findReflowRoot, normalizeTree, reflow } from "../../tree/reflow.js";
 import { appendLog } from "../../logging.js";
+import { insertWindowWithStrategy } from "../../window-insertion.js";
 
 const result = (success: boolean, message?: string): CommandResult => ({
   success,
@@ -23,6 +24,24 @@ const findFirstWindow = (container: Container): WindowContainer | null => {
 
   for (const child of container.children) {
     const match = findFirstWindow(child);
+    if (match) {
+      return match;
+    }
+  }
+
+  return null;
+};
+
+const findWindowById = (
+  container: Container,
+  windowId: number
+): WindowContainer | null => {
+  if (container instanceof WindowContainer && container.windowId === windowId) {
+    return container;
+  }
+
+  for (const child of container.children) {
+    const match = findWindowById(child, windowId);
     if (match) {
       return match;
     }
@@ -327,7 +346,20 @@ export const moveHandler: CommandHandler = {
         }
 
         const split = findSplitTarget(targetWorkspace);
-        split.addChild(sourceWindow);
+        const fallbackFocused = findFirstWindow(targetWorkspace) ?? sourceWindow;
+        const lastFocusedId = targetWorkspace.lastFocusedWindowId;
+        const preferredFocused = lastFocusedId
+          ? findWindowById(targetWorkspace, lastFocusedId)
+          : null;
+        const focused = preferredFocused ?? fallbackFocused;
+
+        insertWindowWithStrategy({
+          root: context.root,
+          split,
+          container: sourceWindow,
+          focused,
+          mode: context.config.alternatingMode ?? "focused",
+        });
         if (sourceWindow.floating) {
           targetWorkspace.addFloatingWindow(sourceWindow);
         }
