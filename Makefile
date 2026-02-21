@@ -3,7 +3,7 @@ INSTALL_DIR = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 REPO_DIR = $(CURDIR)
 BUILD_DIR = $(CURDIR)/dist
 
-.PHONY: help build install uninstall enable disable nested looking-glass lint test check logs logs-nested ipc-tree ipc-debug clean
+.PHONY: help build install uninstall enable disable nested looking-glass lint test check logs logs-nested ipc-tree ipc-debug clean pack
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -83,3 +83,6 @@ check: lint build test ## Run all checks (lint, build, tests)
 
 clean: ## Remove build output
 	rm -rf $(BUILD_DIR)
+
+pack: ## Package the extension as a zip (usage: make pack ZIPFILE=name.zip)
+	cd $(BUILD_DIR) && zip -r "../$(ZIPFILE)" .
