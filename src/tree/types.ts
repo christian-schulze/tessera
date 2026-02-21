@@ -11,7 +11,6 @@ export enum Layout {
   SplitV = "splitv",
   Stacking = "stacking",
   Tabbed = "tabbed",
-  Alternating = "alternating",
 }
 
 export interface Rect {
@@ -25,6 +24,7 @@ export interface ContainerJSON {
   id: number;
   type: ContainerType;
   layout: Layout;
+  alternating: boolean;
   rect: Rect;
   focused: boolean;
   marks: string[];

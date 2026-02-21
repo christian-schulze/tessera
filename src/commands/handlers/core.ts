@@ -75,7 +75,7 @@ const findWorkspaceByNumber = (root: Container, number: number): WorkspaceContai
   return null;
 };
 
-const findSplitTarget = (workspace: WorkspaceContainer): SplitContainer => {
+const findSplitTarget = (workspace: WorkspaceContainer, defaultAlternating = true): SplitContainer => {
   const existing = workspace.children.find(
     (child) => child.type === ContainerType.Split
   ) as SplitContainer | undefined;
@@ -86,8 +86,9 @@ const findSplitTarget = (workspace: WorkspaceContainer): SplitContainer => {
 
   const split = new SplitContainer(
     workspace.id * 100 + workspace.children.length + 1,
-    Layout.Alternating
+    Layout.SplitH
   );
+  split.alternating = defaultAlternating;
   split.rect = { ...workspace.rect };
   workspace.addChild(split);
   return split;
@@ -345,7 +346,7 @@ export const moveHandler: CommandHandler = {
           currentWorkspace?.removeFloatingWindow(sourceWindow);
         }
 
-        const split = findSplitTarget(targetWorkspace);
+        const split = findSplitTarget(targetWorkspace, context.config.defaultAlternating ?? true);
         const fallbackFocused = findFirstWindow(targetWorkspace) ?? sourceWindow;
         const lastFocusedId = targetWorkspace.lastFocusedWindowId;
         const preferredFocused = lastFocusedId
@@ -551,7 +552,6 @@ export const layoutHandler: CommandHandler = {
       splith: Layout.SplitH,
       stacking: Layout.Stacking,
       tabbed: Layout.Tabbed,
-      alternating: Layout.Alternating,
     };
 
     const layout = layoutMap[target];
@@ -577,6 +577,35 @@ export const alternatingModeHandler: CommandHandler = {
       return result(false, "Unknown alternating mode");
     }
     context.config.alternatingMode = mode as "focused" | "tail";
+    return result(true);
+  },
+};
+
+export const alternatingHandler: CommandHandler = {
+  action: "alternating",
+  execute: (command, context) => {
+    const focused = getFocused(context);
+    if (!focused || !focused.parent) {
+      return result(false, "No focused container");
+    }
+
+    const action = command.args[0];
+    const parent = focused.parent;
+
+    if (action === "on") {
+      parent.alternating = true;
+    } else if (action === "off") {
+      parent.alternating = false;
+    } else if (action === "toggle") {
+      parent.alternating = !parent.alternating;
+    } else {
+      return result(false, "Unknown alternating action. Use on, off, or toggle");
+    }
+
+    const altReflowRoot = findReflowRoot(parent);
+    reflow(altReflowRoot);
+    applyLayout(altReflowRoot, context.adapter);
+
     return result(true);
   },
 };

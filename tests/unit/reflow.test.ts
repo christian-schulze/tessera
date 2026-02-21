@@ -133,7 +133,8 @@ describe("reflow", () => {
     const module = await import("../../src/tree/reflow.ts");
 
     const workspace = new WorkspaceContainer(1, "1", 1, true);
-    const alternating = new SplitContainer(2, Layout.Alternating);
+    const alternating = new SplitContainer(2, Layout.SplitH);
+    alternating.alternating = true;
     workspace.addChild(alternating);
     const splitH = new SplitContainer(3, Layout.SplitH);
     alternating.addChild(splitH);
@@ -154,7 +155,8 @@ describe("reflow", () => {
     const module = await import("../../src/tree/reflow.ts");
 
     const workspace = new WorkspaceContainer(1, "1", 1, true);
-    const alternating = new SplitContainer(2, Layout.Alternating);
+    const alternating = new SplitContainer(2, Layout.SplitH);
+    alternating.alternating = true;
     workspace.addChild(alternating);
     const splitH = new SplitContainer(3, Layout.SplitH);
     const emptySplit = new SplitContainer(4, Layout.SplitV);

@@ -15,7 +15,7 @@ export const insertWindowWithStrategy = (options: {
   log?: LogFn;
 }): void => {
   const { root, split, container, focused, mode, log } = options;
-  const strategy = getLayoutStrategy(split.layout);
+  const strategy = getLayoutStrategy(split);
   log?.(
     `[tessera tracker] onWindowAdded layout=${split.layout} mode=${mode} targetId=${focused.id}`
   );

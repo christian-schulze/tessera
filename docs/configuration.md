@@ -15,6 +15,26 @@ module.exports = {
 
 Only the fields you specify are applied; everything else keeps its default value.
 
+## Alternating Layout
+
+By default, Tessera uses a BSP-style *alternating* layout: each new window is nested in a split container whose axis alternates between horizontal and vertical, producing a balanced binary tree. For example, with four windows in focused mode:
+
+```
+┌─────────┬─────────┐
+│    A    │    B    │
+│         ├────┬────┤
+│         │ C  │ D  │
+└─────────┴────┴────┘
+```
+
+The `defaultAlternating` config key controls whether new workspace root splits start in this mode. To opt out globally, set `defaultAlternating: false`; all new workspaces will use a plain horizontal split instead.
+
+The `alternating` flag can be toggled at runtime per-split with `Super+Shift+E` (default binding) or the `alternating on|off|toggle` command. This lets you mix plain and alternating splits in the same session.
+
+The `alternatingMode` key controls *where* a new window is inserted within an alternating split:
+- `"focused"` (default) — inserted next to the currently focused window
+- `"tail"` — always appended at the tail of the tree
+
 ## Full Reference
 
 ```js
@@ -22,6 +42,11 @@ module.exports = {
   // Minimum window dimensions before a window is auto-floated.
   minTileWidth: 300,    // default: 300
   minTileHeight: 240,   // default: 240
+
+  // Whether new workspace root splits start in alternating mode.
+  // When true, windows are placed using the BSP-style alternating layout.
+  // When false, new workspaces use plain SplitH.
+  defaultAlternating: true, // default: true
 
   // Alternating layout insertion mode: "focused" inserts next to the
   // focused window, "tail" always appends at the end of the tree.
@@ -108,6 +133,7 @@ When `modes` is omitted or `null`, these defaults are used:
 | `Super+B` | Split horizontal |
 | `Super+V` | Split vertical |
 | `Super+E` | Toggle split layout |
+| `Super+Shift+E` | Toggle alternating mode on focused split |
 | `Super+F` | Toggle fullscreen |
 | `Super+I` | Show/hide window inspect overlay |
 | `Super+Shift+Q` | Close focused window |
@@ -210,6 +236,7 @@ Any Tessera command can be used in rules:
 - `fullscreen enable` — make window fullscreen
 - `resize set W H` — set window size
 - `retile` — recompute and reapply layout to all windows
+- `alternating on` / `alternating off` / `alternating toggle` — control alternating mode on the focused split
 
 ## Workspace-Output Assignments
 

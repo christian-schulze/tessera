@@ -209,7 +209,7 @@ export class WindowTracker {
         !(child as WindowContainer).floating
     ).length;
     const projectedCount = tiledCount + 1;
-    const shouldFloat = getLayoutStrategy(split.layout).shouldFloatOnAdd(
+    const shouldFloat = getLayoutStrategy(split).shouldFloatOnAdd(
       workspace.rect,
       projectedCount,
       minTileWidth,
@@ -454,7 +454,7 @@ export class WindowTracker {
             width: Math.abs(actual.width - desired.width) <= 1 ? desired.width : actual.width,
             height: Math.abs(actual.height - desired.height) <= 1 ? desired.height : actual.height,
           };
-          const shouldFloat = getLayoutStrategy(parent.layout).shouldFloatOnRetry(
+          const shouldFloat = getLayoutStrategy(parent).shouldFloatOnRetry(
             workspace.rect,
             tiledCount,
             minTileWidth,
@@ -561,7 +561,7 @@ export class WindowTracker {
     this.layoutRetries.delete(windowId);
 
     if (parent) {
-      const strategy = getLayoutStrategy(parent.layout);
+      const strategy = getLayoutStrategy(parent);
       const result = strategy.onWindowRemoved?.({
         root: this.root,
         parent,
@@ -591,7 +591,8 @@ export class WindowTracker {
       return existing;
     }
 
-    const split = new SplitContainer(this.root.nextId(), Layout.Alternating);
+    const split = new SplitContainer(this.root.nextId(), Layout.SplitH);
+    split.alternating = this.getConfig().defaultAlternating ?? true;
     split.rect = { ...workspace.rect };
     workspace.addChild(split);
     return split;

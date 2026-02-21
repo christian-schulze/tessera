@@ -31,6 +31,7 @@ export type TesseraConfig = {
   minTileWidth: number;
   minTileHeight: number;
   alternatingMode: AlternatingMode;
+  defaultAlternating: boolean;
   modes: BindingMode[] | null;
   rules: ForWindowRule[];
   workspaceOutputs: WorkspaceOutputMap;
@@ -43,6 +44,7 @@ export const DEFAULT_CONFIG: TesseraConfig = {
   minTileWidth: 300,
   minTileHeight: 240,
   alternatingMode: "focused",
+  defaultAlternating: true,
   modes: null,
   rules: [],
   workspaceOutputs: {},
@@ -85,6 +87,13 @@ const normalizeAlternatingMode = (value: unknown): AlternatingMode | null => {
   }
 
   return null;
+};
+
+const normalizeDefaultAlternating = (value: unknown): boolean | null => {
+  if (typeof value !== "boolean") {
+    return null;
+  }
+  return value;
 };
 
 const normalizeBinding = (value: unknown): BindingMode["bindings"][number] | null => {
@@ -299,6 +308,11 @@ export const applyConfig = (
   const alternatingMode = normalizeAlternatingMode(candidate.alternatingMode);
   if (alternatingMode !== null) {
     target.alternatingMode = alternatingMode;
+  }
+
+  const defaultAlternating = normalizeDefaultAlternating(candidate.defaultAlternating);
+  if (defaultAlternating !== null) {
+    target.defaultAlternating = defaultAlternating;
   }
 
   const modes = normalizeModes(candidate.modes);

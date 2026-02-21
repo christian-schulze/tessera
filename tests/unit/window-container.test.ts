@@ -31,6 +31,7 @@ describe("WindowContainer", () => {
       id: 1,
       type: ContainerType.Window,
       layout: Layout.SplitV,
+      alternating: false,
       rect: { x: 5, y: 10, width: 100, height: 200 },
       focused: true,
       marks: [],

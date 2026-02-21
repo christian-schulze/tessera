@@ -38,8 +38,7 @@ const layoutName = (layout: Layout): string => {
     case Layout.SplitV: return "SplitV";
     case Layout.Stacking: return "Stacking";
     case Layout.Tabbed: return "Tabbed";
-    case Layout.Alternating: return "Alternating";
-    default: return `Layout(${layout as number})`;
+    default: return `Layout(${layout as string})`;
   }
 };
 
@@ -168,10 +167,12 @@ export class InspectOverlay {
       const p = container.parent;
       const isAutoSplit =
         (p.layout === Layout.SplitH || p.layout === Layout.SplitV) &&
-        p.parent?.layout === Layout.Alternating;
-      const layoutLabel = isAutoSplit
-        ? `${layoutName(p.layout)}, auto`
-        : layoutName(p.layout);
+        p.parent?.alternating === true;
+      const layoutLabel = p.alternating
+        ? `${layoutName(p.layout)} (alt)`
+        : isAutoSplit
+          ? `${layoutName(p.layout)}, auto`
+          : layoutName(p.layout);
       add(
         `  Parent:     ${containerTypeName(p.type)} [${layoutLabel}] — ${p.children.length} child${p.children.length === 1 ? "" : "ren"}`
       );

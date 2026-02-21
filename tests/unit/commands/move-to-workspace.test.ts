@@ -20,7 +20,8 @@ describe("move container to workspace", () => {
     const output = new OutputContainer(8, 0, { x: 0, y: 0, width: 200, height: 100 });
     root.addOutput(output);
     const workspace10 = new WorkspaceContainer(2, "10", 10, true);
-    const split = new SplitContainer(3, Layout.Alternating);
+    const split = new SplitContainer(3, Layout.SplitH);
+    split.alternating = true;
     workspace10.addChild(split);
     output.addChild(workspace10);
 
@@ -29,7 +30,8 @@ describe("move container to workspace", () => {
 
     const movingWindow = makeWindow(5, "Moving");
     const workspace1 = new WorkspaceContainer(6, "1", 1, false);
-    const sourceSplit = new SplitContainer(7, Layout.Alternating);
+    const sourceSplit = new SplitContainer(7, Layout.SplitH);
+    sourceSplit.alternating = true;
     workspace1.addChild(sourceSplit);
     sourceSplit.addChild(movingWindow);
     output.addChild(workspace1);
@@ -65,10 +67,9 @@ describe("move container to workspace", () => {
     });
 
     const targetSplit = workspace10.children[0] as SplitContainer;
-    expect(targetSplit.layout).toBe(Layout.Alternating);
-    expect(targetSplit.children.length).toBe(1);
-    const wrapper = targetSplit.children[0] as SplitContainer;
-    expect(wrapper.layout).toBe(Layout.SplitH);
-    expect(wrapper.children.map((child) => child.id)).toEqual([4, 5]);
+    expect(targetSplit.layout).toBe(Layout.SplitH);
+    expect(targetSplit.alternating).toBe(true);
+    expect(targetSplit.children.length).toBe(2);
+    expect(targetSplit.children.map((child) => child.id)).toEqual([4, 5]);
   });
 });

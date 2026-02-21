@@ -15,6 +15,7 @@ export type TreeBuilderOptions = {
   workspaceCount?: number;
   activeWorkspaceIndex?: number;
   workspaceOutputs?: WorkspaceOutputMap;
+  defaultAlternating?: boolean;
 };
 
 export class TreeBuilder {
@@ -32,6 +33,7 @@ export class TreeBuilder {
     const workspaceCount = options.workspaceCount ?? 1;
     const activeWorkspaceIndex = options.activeWorkspaceIndex ?? 0;
     const workspaceOutputs = options.workspaceOutputs ?? {};
+    const defaultAlternating = options.defaultAlternating ?? true;
 
     for (const monitor of monitors) {
       const workArea = this.toRect(monitor.workArea);
@@ -56,7 +58,8 @@ export class TreeBuilder {
         workspace.rect = this.toRect(workArea);
         output.addChild(workspace);
 
-        const split = new SplitContainer(root.nextId(), Layout.Alternating);
+        const split = new SplitContainer(root.nextId(), Layout.SplitH);
+        split.alternating = defaultAlternating;
         split.rect = this.toRect(workArea);
         workspace.addChild(split);
       }

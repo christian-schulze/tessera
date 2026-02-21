@@ -7,6 +7,7 @@ import { RootContainer } from "../../../../src/tree/root-container.ts";
 import { Layout } from "../../../../src/tree/container.ts";
 import { insertWindowWithStrategy } from "../../../../src/window-insertion.ts";
 import {
+  alternatingHandler,
   alternatingModeHandler,
   focusHandler,
   layoutHandler,
@@ -447,7 +448,7 @@ describe("Core command handlers", () => {
     expect(adapter.moveResize).toHaveBeenCalled();
   });
 
-  it("layout supports alternating", () => {
+  it("layout alternating is no longer supported", () => {
     const window = new WindowContainer(1, {}, 1, "app", "title");
     const parent = new SplitContainer(2, Layout.SplitH);
     parent.addChild(window);
@@ -462,9 +463,61 @@ describe("Core command handlers", () => {
       config,
     });
 
-    expect(result.success).toBeTrue();
-    expect(parent.layout).toBe(Layout.Alternating);
-    expect(adapter.moveResize).toHaveBeenCalled();
+    expect(result.success).toBeFalse();
+  });
+
+  it("alternating toggle flips the alternating flag on parent", () => {
+    const window = new WindowContainer(1, {}, 1, "app", "title");
+    const parent = new SplitContainer(2, Layout.SplitH);
+    parent.addChild(window);
+
+    const adapter = makeAdapter();
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
+
+    expect(parent.alternating).toBeFalse();
+
+    alternatingHandler.execute(makeCommand("alternating", ["toggle"]), {
+      root: parent as any,
+      focused: window,
+      adapter,
+      config,
+    });
+
+    expect(parent.alternating).toBeTrue();
+
+    alternatingHandler.execute(makeCommand("alternating", ["toggle"]), {
+      root: parent as any,
+      focused: window,
+      adapter,
+      config,
+    });
+
+    expect(parent.alternating).toBeFalse();
+  });
+
+  it("alternating on/off sets the flag explicitly", () => {
+    const window = new WindowContainer(1, {}, 1, "app", "title");
+    const parent = new SplitContainer(2, Layout.SplitH);
+    parent.addChild(window);
+
+    const adapter = makeAdapter();
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
+
+    alternatingHandler.execute(makeCommand("alternating", ["on"]), {
+      root: parent as any,
+      focused: window,
+      adapter,
+      config,
+    });
+    expect(parent.alternating).toBeTrue();
+
+    alternatingHandler.execute(makeCommand("alternating", ["off"]), {
+      root: parent as any,
+      focused: window,
+      adapter,
+      config,
+    });
+    expect(parent.alternating).toBeFalse();
   });
 
   it("alternating-mode updates config", () => {
@@ -494,7 +547,8 @@ describe("Core command handlers", () => {
   });
 
   it("split in alternating focus mode wraps focused with opposite axis", () => {
-    const parent = new SplitContainer(1, Layout.Alternating);
+    const parent = new SplitContainer(1, Layout.SplitH);
+    parent.alternating = true;
     const focused = new WindowContainer(2, {}, 1, "app", "Focus");
     const sibling = new WindowContainer(3, {}, 2, "app", "Sibling");
     const split = new SplitContainer(4, Layout.SplitH);
@@ -517,7 +571,8 @@ describe("Core command handlers", () => {
   });
 
   it("split in alternating tail mode walks to last child and flips axis", () => {
-    const parent = new SplitContainer(1, Layout.Alternating);
+    const parent = new SplitContainer(1, Layout.SplitH);
+    parent.alternating = true;
     const a = new WindowContainer(2, {}, 1, "app", "A");
     const b = new WindowContainer(3, {}, 2, "app", "B");
     const split = new SplitContainer(4, Layout.SplitH);
@@ -540,7 +595,8 @@ describe("Core command handlers", () => {
 
   it("alternating focused mode wraps focused when adding window", () => {
     const root = new RootContainer(1);
-    const parent = new SplitContainer(2, Layout.Alternating);
+    const parent = new SplitContainer(2, Layout.SplitH);
+    parent.alternating = true;
     const otherSplit = new SplitContainer(3, Layout.SplitH);
     const inner = new SplitContainer(4, Layout.SplitH);
     const focused = new WindowContainer(5, {}, 1, "app", "Focus");
@@ -571,7 +627,8 @@ describe("Core command handlers", () => {
   it("alternating tail mode wraps tail when adding window", () => {
     const root = new RootContainer(1);
     const window = new SplitContainer(2, Layout.SplitH);
-    const parent = new SplitContainer(3, Layout.Alternating);
+    const parent = new SplitContainer(3, Layout.SplitH);
+    parent.alternating = true;
     const inner = new SplitContainer(4, Layout.SplitH);
     const a = new WindowContainer(5, {}, 1, "app", "A");
     const b = new WindowContainer(6, {}, 2, "app", "B");

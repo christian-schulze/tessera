@@ -195,90 +195,6 @@ const splitVStrategy: LayoutStrategy = {
   },
 };
 
-const alternatingStrategy: LayoutStrategy = {
-  id: Layout.Alternating,
-  computeRects: (container) => {
-    computeSplitRects(container, true);
-  },
-  shouldFloatOnAdd: (workspaceRect, projectedCount, minTileWidth) => {
-    return workspaceRect.width / projectedCount < minTileWidth;
-  },
-  shouldFloatOnRetry: (
-    workspaceRect,
-    tiledCount,
-    minTileWidth,
-    _minTileHeight,
-    actualRect
-  ) => {
-    const minWidth = Math.max(minTileWidth, actualRect.width);
-    return workspaceRect.width / tiledCount < minWidth;
-  },
-  onWindowAdded: (context) => {
-    if (context.mode !== "focused" && context.mode !== "tail") {
-      return null;
-    }
-
-    if (context.mode === "focused" && !isDescendantOf(context.parent, context.focused)) {
-      const tailPlan = tailPlanFor(context.parent);
-      if (!tailPlan) {
-        // No SplitH/SplitV found yet (e.g. session restore opens windows without
-        // focus). If there are tiled children, wrap the last one in SplitH —
-        // the first alternating level is always horizontal.
-        const tiledChildren = layoutChildrenFor(context.parent);
-        if (tiledChildren.length === 0) {
-          return null;
-        }
-        return {
-          container: context.parent,
-          wrapLayout: Layout.SplitH,
-          wrapTarget: tiledChildren[tiledChildren.length - 1],
-        };
-      }
-
-      return {
-        container: context.parent,
-        wrapLayout: tailPlan.wrapLayout,
-        wrapTarget: tailPlan.wrapTarget,
-      };
-    }
-
-    if (context.mode === "tail") {
-      const tailPlan = tailPlanFor(context.parent);
-      if (!tailPlan) {
-        const tiledChildren = layoutChildrenFor(context.parent);
-        if (tiledChildren.length === 0) {
-          return null;
-        }
-        return {
-          container: context.parent,
-          wrapLayout: Layout.SplitH,
-          wrapTarget: tiledChildren[tiledChildren.length - 1],
-        };
-      }
-
-      return {
-        container: context.parent,
-        wrapLayout: tailPlan.wrapLayout,
-        wrapTarget: tailPlan.wrapTarget,
-      };
-    }
-
-    const targetParent = context.focused.parent;
-    if (!targetParent || targetParent.type !== ContainerType.Split) {
-      return null;
-    }
-
-    const wrapLayout =
-      targetParent.layout === Layout.SplitH ? Layout.SplitV : Layout.SplitH;
-
-    return {
-      container: context.parent,
-      wrapLayout,
-      wrapTarget: context.focused,
-    };
-  },
-};
-
 const fallbackStrategy: LayoutStrategy = {
   id: Layout.SplitV,
   computeRects: (container) => {
@@ -304,12 +220,82 @@ const fallbackStrategy: LayoutStrategy = {
   },
 };
 
+const makeAlternatingWindowAddedHandler = (): WindowAddedHandler => {
+  return (context) => {
+    if (context.mode !== "focused" && context.mode !== "tail") {
+      return null;
+    }
+
+    const tiledChildren = layoutChildrenFor(context.parent);
+    // With 0 or 1 child, append the new window directly alongside the existing one
+    // rather than wrapping in a nested split. Wrapping only makes sense from 3rd+.
+    if (tiledChildren.length <= 1) {
+      return null;
+    }
+
+    if (context.mode === "focused" && !isDescendantOf(context.parent, context.focused)) {
+      const tailPlan = tailPlanFor(context.parent);
+      if (!tailPlan) {
+        const wrapLayout =
+          context.parent.layout === Layout.SplitH ? Layout.SplitV : Layout.SplitH;
+        return {
+          container: context.parent,
+          wrapLayout,
+          wrapTarget: tiledChildren[tiledChildren.length - 1],
+        };
+      }
+
+      return {
+        container: context.parent,
+        wrapLayout: tailPlan.wrapLayout,
+        wrapTarget: tailPlan.wrapTarget,
+      };
+    }
+
+    if (context.mode === "tail") {
+      const tailPlan = tailPlanFor(context.parent);
+      if (!tailPlan) {
+        const wrapLayout =
+          context.parent.layout === Layout.SplitH ? Layout.SplitV : Layout.SplitH;
+        return {
+          container: context.parent,
+          wrapLayout,
+          wrapTarget: tiledChildren[tiledChildren.length - 1],
+        };
+      }
+
+      return {
+        container: context.parent,
+        wrapLayout: tailPlan.wrapLayout,
+        wrapTarget: tailPlan.wrapTarget,
+      };
+    }
+
+    const targetParent = context.focused.parent;
+    if (!targetParent || targetParent.type !== ContainerType.Split) {
+      return null;
+    }
+
+    const wrapLayout =
+      targetParent.layout === Layout.SplitH ? Layout.SplitV : Layout.SplitH;
+
+    return {
+      container: context.parent,
+      wrapLayout,
+      wrapTarget: context.focused,
+    };
+  };
+};
+
 const layoutStrategies = new Map<Layout, LayoutStrategy>([
   [Layout.SplitH, splitHStrategy],
   [Layout.SplitV, splitVStrategy],
-  [Layout.Alternating, alternatingStrategy],
 ]);
 
-export const getLayoutStrategy = (layout: Layout): LayoutStrategy => {
-  return layoutStrategies.get(layout) ?? fallbackStrategy;
+export const getLayoutStrategy = (container: Container): LayoutStrategy => {
+  const base = layoutStrategies.get(container.layout) ?? fallbackStrategy;
+  if (container.alternating) {
+    return { ...base, onWindowAdded: makeAlternatingWindowAddedHandler() };
+  }
+  return base;
 };

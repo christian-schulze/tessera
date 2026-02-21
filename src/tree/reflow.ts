@@ -1,4 +1,4 @@
-import { Container, ContainerType, Layout } from "./container.js";
+import { Container, ContainerType } from "./container.js";
 import type { WindowContainer } from "./window-container.js";
 import { getLayoutStrategy } from "../layout/strategy.js";
 
@@ -27,7 +27,7 @@ export function reflow(container: Container): void {
     return;
   }
 
-  const strategy = getLayoutStrategy(container.layout);
+  const strategy = getLayoutStrategy(container);
   strategy.computeRects(container);
 
   layoutChildren.forEach((child) => {
@@ -45,7 +45,7 @@ export const normalizeTree = (start: Container): void => {
         if (
           child.type === ContainerType.Split &&
           child.children.length === 0 &&
-          child.layout !== Layout.Alternating
+          !child.alternating
         ) {
           current.children.splice(index, 1);
           child.parent = null;
@@ -54,7 +54,7 @@ export const normalizeTree = (start: Container): void => {
 
       const parent: Container | null = current.parent;
       const isWorkspaceChild = parent?.type === ContainerType.Workspace;
-      const isAlternating = current.layout === Layout.Alternating;
+      const isAlternating = current.alternating;
 
       if (current.children.length === 0) {
         if (parent && !isWorkspaceChild && !isAlternating) {

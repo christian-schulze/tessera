@@ -1,6 +1,7 @@
 import { CommandEngine } from "./engine.js";
 import type { CommandHandler } from "./types.js";
 import {
+  alternatingHandler,
   alternatingModeHandler,
   focusHandler,
   layoutHandler,
@@ -35,6 +36,7 @@ export const registerDefaultHandlers = (engine: CommandEngine): void => {
   engine.register(layoutHandler);
   engine.register(modeHandler);
   engine.register(splitHandler);
+  engine.register(alternatingHandler);
   engine.register(alternatingModeHandler);
   engine.register(retileHandler);
   engine.register(aliasHandler("splitv", splitHandler));

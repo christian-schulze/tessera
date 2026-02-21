@@ -10,6 +10,7 @@ export class Container {
   parent: Container | null;
   children: Container[];
   layout: Layout;
+  alternating: boolean;
   rect: Rect;
   focused: boolean;
   proportion: number;
@@ -21,6 +22,7 @@ export class Container {
     this.parent = null;
     this.children = [];
     this.layout = Layout.SplitH;
+    this.alternating = false;
     this.rect = { x: 0, y: 0, width: 0, height: 0 };
     this.focused = false;
     this.proportion = 1;
@@ -74,6 +76,7 @@ export class Container {
       id: this.id,
       type: this.type,
       layout: this.layout,
+      alternating: this.alternating,
       rect: { ...this.rect },
       focused: this.focused,
       marks: Array.from(this.marks),

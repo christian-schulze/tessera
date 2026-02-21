@@ -42,6 +42,7 @@ describe("OutputContainer", () => {
       id: 1,
       type: ContainerType.Output,
       layout: output.layout,
+      alternating: false,
       rect: output.rect,
       focused: false,
       marks: [],
