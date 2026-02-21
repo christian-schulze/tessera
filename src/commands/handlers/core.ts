@@ -527,7 +527,10 @@ export const splitHandler: CommandHandler = {
       return result(false, "No focused container to split");
     }
 
-    const value = command.action === "splitv" || command.args[0] === "v";
+    const value =
+      command.action === "splitv" ||
+      command.args[0] === "v" ||
+      command.args[0] === "vertical";
     focused.parent.setLayout(value ? Layout.SplitV : Layout.SplitH);
 
     const splitReflowRoot = findReflowRoot(focused.parent);
@@ -547,6 +550,19 @@ export const layoutHandler: CommandHandler = {
     }
 
     const target = command.args[0];
+
+    if (target === "toggle") {
+      const current = focused.parent.layout;
+      const toggled = current === Layout.SplitH ? Layout.SplitV : Layout.SplitH;
+      focused.parent.setLayout(toggled);
+
+      const toggleReflowRoot = findReflowRoot(focused.parent);
+      reflow(toggleReflowRoot);
+      applyLayout(toggleReflowRoot, context.adapter);
+
+      return result(true);
+    }
+
     const layoutMap: Record<string, Layout> = {
       splitv: Layout.SplitV,
       splith: Layout.SplitH,
