@@ -10,6 +10,7 @@ import {
   resizeHandler,
   retileHandler,
   splitHandler,
+  swapHandler,
 } from "./handlers/core.js";
 import {
   floatingHandler,
@@ -32,6 +33,7 @@ export const buildCommandEngine = (): CommandEngine => new CommandEngine();
 export const registerDefaultHandlers = (engine: CommandEngine): void => {
   engine.register(focusHandler);
   engine.register(moveHandler);
+  engine.register(swapHandler);
   engine.register(resizeHandler);
   engine.register(layoutHandler);
   engine.register(modeHandler);

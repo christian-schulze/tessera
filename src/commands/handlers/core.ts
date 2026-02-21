@@ -299,6 +299,66 @@ export const focusHandler: CommandHandler = {
   },
 };
 
+export const swapHandler: CommandHandler = {
+  action: "swap",
+  execute: (command, context) => {
+    const focused = getFocused(context);
+    if (!focused) {
+      return result(false, "No focused container to swap");
+    }
+
+    if (!focused.parent) {
+      return result(false, "No focused container to swap");
+    }
+
+    const direction = command.args[0];
+    if (!direction) {
+      return result(false, "Swap direction required");
+    }
+
+    const sourceWindow = focused instanceof WindowContainer
+      ? focused
+      : findFirstWindow(focused);
+    if (!sourceWindow) {
+      return result(false, "No focused window");
+    }
+
+    const currentWorkspace = findWorkspaceForContainer(sourceWindow);
+    const targetWindow = findDirectionalWindow(currentWorkspace ?? context.root, sourceWindow, direction);
+    if (!targetWindow) {
+      return result(true);
+    }
+
+    const sourceParent = sourceWindow.parent;
+    const targetParent = targetWindow.parent;
+    if (!sourceParent || !targetParent) {
+      return result(true);
+    }
+
+    const sourceIndex = sourceParent.children.indexOf(sourceWindow);
+    const targetIndex = targetParent.children.indexOf(targetWindow);
+    if (sourceIndex === -1 || targetIndex === -1) {
+      return result(false, "Focused container not in parent");
+    }
+
+    sourceParent.children.splice(sourceIndex, 1, targetWindow);
+    targetParent.children.splice(targetIndex, 1, sourceWindow);
+    sourceWindow.parent = targetParent;
+    targetWindow.parent = sourceParent;
+
+    normalizeTree(sourceParent);
+    if (targetParent !== sourceParent) {
+      normalizeTree(targetParent);
+    }
+
+    const reflowRoot = findReflowRoot(sourceParent);
+    reflow(reflowRoot, context.config.gaps);
+    applyLayout(reflowRoot, context.adapter);
+
+    return result(true);
+  },
+};
+
 export const moveHandler: CommandHandler = {
   action: "move",
   execute: (command, context) => {
@@ -397,28 +457,45 @@ export const moveHandler: CommandHandler = {
     }
 
     const sourceParent = sourceWindow.parent;
-    const targetParent = targetWindow.parent;
-    if (!sourceParent || !targetParent) {
+    if (!sourceParent) {
       return result(true);
     }
 
-    const sourceIndex = sourceParent.children.indexOf(sourceWindow);
-    const targetIndex = targetParent.children.indexOf(targetWindow);
-    if (sourceIndex === -1 || targetIndex === -1) {
-      return result(false, "Focused container not in parent");
-    }
-
-    sourceParent.children.splice(sourceIndex, 1, targetWindow);
-    targetParent.children.splice(targetIndex, 1, sourceWindow);
-    sourceWindow.parent = targetParent;
-    targetWindow.parent = sourceParent;
-
+    // Remove sourceWindow from its current parent. normalizeTree may collapse sourceParent
+    // (e.g. a non-alternating, non-workspace-child split left with 1 child gets inlined).
+    sourceParent.removeChild(sourceWindow);
     normalizeTree(sourceParent);
-    if (targetParent !== sourceParent) {
-      normalizeTree(targetParent);
+
+    // Re-read targetWindow's parent: normalizeTree may have promoted targetWindow up one level.
+    const targetSplit = targetWindow.parent;
+    if (!(targetSplit instanceof SplitContainer)) {
+      return result(true);
     }
 
-    const reflowRoot = findReflowRoot(sourceParent);
+    if (targetSplit.alternating) {
+      // Alternating layout: use the same insertion strategy as adding a new window with
+      // targetWindow focused. This creates a perpendicular sub-split around targetWindow
+      // so the moved window nests correctly (e.g. moving left into a SplitH wraps the
+      // target in a new SplitV, placing the moved window beside it in the right orientation).
+      insertWindowWithStrategy({
+        root: context.root,
+        split: targetSplit,
+        container: sourceWindow,
+        focused: targetWindow,
+        mode: "focused",
+      });
+    } else {
+      // Non-alternating: splice sourceWindow adjacent to target in its parent.
+      // moving left/up → insert after target (we arrived from the right/below side)
+      // moving right/down → insert before target (we arrived from the left/above side)
+      const insertAfter = direction === "left" || direction === "up";
+      const targetIndex = targetSplit.children.indexOf(targetWindow);
+      const insertIndex = insertAfter ? targetIndex + 1 : targetIndex;
+      targetSplit.children.splice(insertIndex, 0, sourceWindow);
+      sourceWindow.parent = targetSplit;
+    }
+
+    const reflowRoot = findReflowRoot(sourceWindow);
     reflow(reflowRoot, context.config.gaps);
     applyLayout(reflowRoot, context.adapter);
 

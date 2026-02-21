@@ -14,6 +14,7 @@ import {
   moveHandler,
   resizeHandler,
   splitHandler,
+  swapHandler,
 } from "../../../../src/commands/handlers/core.ts";
 
 describe("Core command handlers", () => {
@@ -118,7 +119,7 @@ describe("Core command handlers", () => {
     expect(rightWindow.focused).toBeFalse();
   });
 
-  it("move reorders a focused window within its parent", () => {
+  it("swap reorders a focused window within its parent", () => {
     const windowA = new WindowContainer(1, {}, 1, "app", "A");
     const windowB = new WindowContainer(2, {}, 2, "app", "B");
     const split = new SplitContainer(3, Layout.SplitH);
@@ -131,7 +132,7 @@ describe("Core command handlers", () => {
     windowB.rect = { x: 100, y: 0, width: 100, height: 100 };
     windowA.rect = { x: 0, y: 0, width: 100, height: 100 };
 
-    const result = moveHandler.execute(makeCommand("move", ["left"]), {
+    const result = swapHandler.execute(makeCommand("swap", ["left"]), {
       root: split as any,
       focused: windowB,
       adapter,
@@ -236,7 +237,7 @@ describe("Core command handlers", () => {
     expect(workspaceB.lastFocusedWindowId).toBe(1);
   });
 
-  it("move swaps with the nearest window in direction", () => {
+  it("swap swaps with the nearest window in direction", () => {
     const root = new RootContainer(1);
     const parent = new SplitContainer(2, Layout.SplitH);
     root.addChild(parent);
@@ -255,7 +256,7 @@ describe("Core command handlers", () => {
     const adapter = makeAdapter();
     const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
 
-    const result = moveHandler.execute(makeCommand("move", ["left"]), {
+    const result = swapHandler.execute(makeCommand("swap", ["left"]), {
       root: root as any,
       focused: rightWindow,
       adapter,
@@ -265,6 +266,102 @@ describe("Core command handlers", () => {
     expect(result.success).toBeTrue();
     expect(parent.children[1]).toBe(rightWindow);
     expect(parent.children[2]).toBe(midWindow);
+  });
+
+  it("move re-parents focused window into adjacent container (non-alternating)", () => {
+    // Workspace holds two workspace-level splits (non-alternating).
+    // Scenario: leftSplit[WindowA] | rightSplit[WindowB, WindowC*]
+    // Moving WindowC left → leftSplit[WindowA, WindowC], rightSplit stays with [WindowB]
+    // (rightSplit is a workspace child so it is NOT collapsed by normalizeTree)
+    const root = new RootContainer(1);
+    const workspace = new WorkspaceContainer(2, "1", 1, true);
+    root.addChild(workspace);
+
+    const leftSplit = new SplitContainer(3, Layout.SplitH);
+    leftSplit.rect = { x: 0, y: 0, width: 100, height: 200 };
+    const rightSplit = new SplitContainer(4, Layout.SplitV);
+    rightSplit.rect = { x: 200, y: 0, width: 100, height: 200 };
+    workspace.addChild(leftSplit);
+    workspace.addChild(rightSplit);
+
+    const windowA = new WindowContainer(5, {}, 1, "app", "A");
+    windowA.rect = { x: 0, y: 0, width: 100, height: 200 };
+    const windowB = new WindowContainer(6, {}, 2, "app", "B");
+    windowB.rect = { x: 200, y: 0, width: 100, height: 100 };
+    const windowC = new WindowContainer(7, {}, 3, "app", "C");
+    windowC.rect = { x: 200, y: 100, width: 100, height: 100 };
+
+    leftSplit.addChild(windowA);
+    rightSplit.addChild(windowB);
+    rightSplit.addChild(windowC);
+
+    const adapter = makeAdapter();
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
+
+    const result = moveHandler.execute(makeCommand("move", ["left"]), {
+      root: root as any,
+      focused: windowC,
+      adapter,
+      config,
+    });
+
+    expect(result.success).toBeTrue();
+    // WindowC should now be in leftSplit, after WindowA
+    expect(leftSplit.children).toContain(windowC);
+    expect(windowC.parent).toBe(leftSplit);
+    expect(leftSplit.children[0]).toBe(windowA);
+    expect(leftSplit.children[1]).toBe(windowC);
+    // WindowB remains in rightSplit (workspace child: no collapse even with 1 child)
+    expect(windowB.parent).toBe(rightSplit);
+  });
+
+  it("move re-parents into alternating container creating a perpendicular sub-split", () => {
+    // Scenario: mainSplit[WindowA, rightSplit[WindowB, WindowC*]] where mainSplit is alternating.
+    // After removing WindowC, rightSplit collapses (non-workspace, non-alternating, 1 child).
+    // insertWindowWithStrategy then wraps WindowA in a new SplitV alongside WindowC.
+    // Result: mainSplit[newSplitV[WindowA, WindowC], WindowB]
+    const root = new RootContainer(1);
+    const workspace = new WorkspaceContainer(2, "1", 1, true);
+    root.addChild(workspace);
+
+    const mainSplit = new SplitContainer(3, Layout.SplitH);
+    mainSplit.alternating = true;
+    mainSplit.rect = { x: 0, y: 0, width: 200, height: 200 };
+    workspace.addChild(mainSplit);
+
+    const rightSplit = new SplitContainer(4, Layout.SplitV);
+    rightSplit.rect = { x: 100, y: 0, width: 100, height: 200 };
+
+    const windowA = new WindowContainer(5, {}, 1, "app", "A");
+    windowA.rect = { x: 0, y: 0, width: 100, height: 200 };
+    const windowB = new WindowContainer(6, {}, 2, "app", "B");
+    windowB.rect = { x: 100, y: 0, width: 100, height: 100 };
+    const windowC = new WindowContainer(7, {}, 3, "app", "C");
+    windowC.rect = { x: 100, y: 100, width: 100, height: 100 };
+
+    mainSplit.addChild(windowA);
+    mainSplit.addChild(rightSplit);
+    rightSplit.addChild(windowB);
+    rightSplit.addChild(windowC);
+
+    const adapter = makeAdapter();
+    const config = { minTileWidth: 10, minTileHeight: 10, alternatingMode: "focused" as const };
+
+    const result = moveHandler.execute(makeCommand("move", ["left"]), {
+      root: root as any,
+      focused: windowC,
+      adapter,
+      config,
+    });
+
+    expect(result.success).toBeTrue();
+    // WindowC and WindowA should share a new SplitV (not both flat in mainSplit)
+    expect(windowC.parent).toBe(windowA.parent);
+    expect(windowC.parent).not.toBe(mainSplit);
+    expect(windowA.parent.children[0]).toBe(windowA);
+    expect(windowA.parent.children[1]).toBe(windowC);
+    // rightSplit collapsed (non-workspace, non-alternating, 1 child) → WindowB inlined into mainSplit
+    expect(windowB.parent).toBe(mainSplit);
   });
 
   it("resize adjusts focused window proportion", () => {

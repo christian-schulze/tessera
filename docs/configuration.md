@@ -129,7 +129,7 @@ When `modes` is omitted or `null`, these defaults are used:
 | Key | Command |
 | --- | ------- |
 | `Super+H/J/K/L` | Focus left/down/up/right |
-| `Super+Shift+H/J/K/L` | Move window left/down/up/right |
+| `Super+Shift+H/J/K/L` | Move (re-parent) window left/down/up/right |
 | `Super+B` | Split horizontal |
 | `Super+V` | Split vertical |
 | `Super+E` | Toggle split layout |
@@ -146,6 +146,31 @@ When `modes` is omitted or `null`, these defaults are used:
 | `Super+0` | Switch to workspace 10 |
 | `Super+Shift+1`..`9` | Move window to workspace 1-9 |
 | `Super+Shift+0` | Move window to workspace 10 |
+
+### Move vs Swap
+
+`move left/right/up/down` — **re-parents** the focused window into the nearest container in that direction. In alternating splits this wraps the target window in a new perpendicular sub-split so the moved window nests alongside it (matching how a new window would be inserted with alternating layout). In plain splits it splices the window in adjacent to the target.
+
+`swap left/right/up/down` — **swaps** the focused window with the nearest window in that direction, exchanging their positions in the tree without any re-nesting. `swap` has no default keybinding; add one via custom config or trigger it with IPC:
+
+```bash
+bunx tsx scripts/ipc-run.ts execute "swap left"
+```
+
+To bind `swap` to `Super+Shift+Ctrl+HJKL`, for example:
+
+```js
+const defaults = tessera.defaults.buildDefaultBindingModes();
+
+defaults[0].bindings.push(
+  { keys: ["<Super><Shift><Control>h"], command: "swap left" },
+  { keys: ["<Super><Shift><Control>j"], command: "swap down" },
+  { keys: ["<Super><Shift><Control>k"], command: "swap up" },
+  { keys: ["<Super><Shift><Control>l"], command: "swap right" },
+);
+
+module.exports = { modes: defaults };
+```
 
 **Resize mode:**
 
@@ -233,6 +258,8 @@ Any Tessera command can be used in rules:
 
 - `floating enable` / `floating disable` — float or tile a window
 - `move container to workspace N` — send window to workspace N
+- `move left/right/up/down` — re-parent window into the adjacent container
+- `swap left/right/up/down` — swap window with the nearest window in that direction
 - `fullscreen enable` — make window fullscreen
 - `resize set W H` — set window size
 - `retile` — recompute and reapply layout to all windows
