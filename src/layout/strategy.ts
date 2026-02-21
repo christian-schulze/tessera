@@ -2,6 +2,7 @@ import type { Container, Rect } from "../tree/container.js";
 import { ContainerType, Layout } from "../tree/container.js";
 import type { RootContainer } from "../tree/root-container.js";
 import type { WindowContainer } from "../tree/window-container.js";
+import type { GapsConfig } from "../config.js";
 
 export interface OverflowContext {
   minTileWidth?: number;
@@ -31,7 +32,7 @@ export type WindowAddedHandler = (context: InsertionContext) => InsertionPlan | 
 
 export interface LayoutStrategy {
   id: Layout;
-  computeRects: (container: Container) => void;
+  computeRects: (container: Container, gaps?: GapsConfig) => void;
   shouldFloatOnAdd: (
     workspaceRect: Rect,
     projectedCount: number,
@@ -101,11 +102,20 @@ const tailPlanFor = (parent: Container): Pick<InsertionPlan, "wrapTarget" | "wra
   return { wrapTarget: current, wrapLayout };
 };
 
-const computeSplitRects = (container: Container, isHorizontal: boolean): void => {
+const computeSplitRects = (container: Container, isHorizontal: boolean, gaps?: GapsConfig): void => {
   const layoutChildren = layoutChildrenFor(container);
   if (layoutChildren.length === 0) {
     return;
   }
+
+  const outerPad = container.parent?.type === ContainerType.Workspace ? (gaps?.outer ?? 0) : 0;
+  const innerGap = gaps?.inner ?? 0;
+  const n = layoutChildren.length;
+
+  const baseX = container.rect.x + outerPad;
+  const baseY = container.rect.y + outerPad;
+  const baseWidth = container.rect.width - 2 * outerPad;
+  const baseHeight = container.rect.height - 2 * outerPad;
 
   const totalProportion = layoutChildren.reduce(
     (sum, child) => sum + child.proportion,
@@ -113,11 +123,11 @@ const computeSplitRects = (container: Container, isHorizontal: boolean): void =>
   );
   const safeProportion = totalProportion > 0 ? totalProportion : 1;
 
-  const mainSize = isHorizontal ? container.rect.width : container.rect.height;
-  const available = Math.max(0, mainSize);
+  const mainSize = isHorizontal ? baseWidth : baseHeight;
+  const available = Math.max(0, mainSize - innerGap * (n - 1));
 
   let used = 0;
-  let offset = isHorizontal ? container.rect.x : container.rect.y;
+  let offset = isHorizontal ? baseX : baseY;
 
   layoutChildren.forEach((child, index) => {
     const isLast = index === layoutChildren.length - 1;
@@ -133,27 +143,27 @@ const computeSplitRects = (container: Container, isHorizontal: boolean): void =>
     if (isHorizontal) {
       child.rect = {
         x: offset,
-        y: container.rect.y,
+        y: baseY,
         width: size,
-        height: container.rect.height,
+        height: baseHeight,
       };
-      offset += size;
+      offset += size + innerGap;
     } else {
       child.rect = {
-        x: container.rect.x,
+        x: baseX,
         y: offset,
-        width: container.rect.width,
+        width: baseWidth,
         height: size,
       };
-      offset += size;
+      offset += size + innerGap;
     }
   });
 };
 
 const splitHStrategy: LayoutStrategy = {
   id: Layout.SplitH,
-  computeRects: (container) => {
-    computeSplitRects(container, true);
+  computeRects: (container, gaps) => {
+    computeSplitRects(container, true, gaps);
   },
   shouldFloatOnAdd: (workspaceRect, projectedCount, minTileWidth) => {
     return workspaceRect.width / projectedCount < minTileWidth;
@@ -172,8 +182,8 @@ const splitHStrategy: LayoutStrategy = {
 
 const splitVStrategy: LayoutStrategy = {
   id: Layout.SplitV,
-  computeRects: (container) => {
-    computeSplitRects(container, false);
+  computeRects: (container, gaps) => {
+    computeSplitRects(container, false, gaps);
   },
   shouldFloatOnAdd: (
     workspaceRect,
@@ -197,8 +207,8 @@ const splitVStrategy: LayoutStrategy = {
 
 const fallbackStrategy: LayoutStrategy = {
   id: Layout.SplitV,
-  computeRects: (container) => {
-    computeSplitRects(container, false);
+  computeRects: (container, gaps) => {
+    computeSplitRects(container, false, gaps);
   },
   shouldFloatOnAdd: (
     workspaceRect,

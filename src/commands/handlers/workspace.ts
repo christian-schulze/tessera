@@ -229,7 +229,7 @@ export const floatingHandler: CommandHandler = {
         if (floating) {
           workspace.addFloatingWindow(focused);
         }
-        reflow(workspace);
+        reflow(workspace, context.config.gaps);
         applyLayout(workspace, context.adapter);
       }
 

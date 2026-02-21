@@ -280,7 +280,7 @@ export class WindowTracker {
       }
     }
 
-    reflow(split);
+    reflow(split, this.getConfig().gaps);
     applyLayout(split, this.adapter);
     this.onLayoutApplied?.();
 
@@ -431,7 +431,7 @@ export class WindowTracker {
       const parent = container.parent;
       if (parent) {
         const reflowRoot = findReflowRoot(parent);
-        reflow(reflowRoot);
+        reflow(reflowRoot, this.getConfig().gaps);
         applyLayout(reflowRoot, this.adapter);
         this.onLayoutApplied?.();
       }
@@ -476,7 +476,7 @@ export class WindowTracker {
             container.rect = { x, y, width, height };
             this.adapter.moveResize(window, container.rect);
             const floatReflowRoot = findReflowRoot(parent);
-            reflow(floatReflowRoot);
+            reflow(floatReflowRoot, this.getConfig().gaps);
             applyLayout(floatReflowRoot, this.adapter);
             this.onLayoutApplied?.();
           }
@@ -573,7 +573,7 @@ export class WindowTracker {
       if (!result?.handled) {
         normalizeTree(parent);
       }
-      reflow(reflowRoot);
+      reflow(reflowRoot, this.getConfig().gaps);
       applyLayout(reflowRoot, this.adapter);
       this.onLayoutApplied?.();
     }

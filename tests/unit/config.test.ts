@@ -28,11 +28,11 @@ describe("config", () => {
     expect(DEFAULT_CONFIG.exec).toEqual([]);
   });
 
-  xit("has correct default for gaps (not yet implemented)", () => {
+  it("has correct default for gaps", () => {
     expect(DEFAULT_CONFIG.gaps).toEqual({ inner: 0, outer: 0 });
   });
 
-  xdescribe("gaps", () => {
+  describe("gaps", () => {
     it("applies valid gaps", () => {
       const config = freshConfig();
       applyConfig(config, { gaps: { inner: 8, outer: 4 } });
@@ -256,7 +256,7 @@ describe("config", () => {
   });
 
   describe("backward compatibility", () => {
-    xit("applies only existing fields without touching new defaults (gaps not yet implemented)", () => {
+    it("applies only existing fields without touching new defaults", () => {
       const config = freshConfig();
       applyConfig(config, { minTileWidth: 400 });
       expect(config.minTileWidth).toBe(400);

@@ -3,6 +3,11 @@ import { buildDefaultBindingModes } from "./bindings/defaults.js";
 
 export type AlternatingMode = "focused" | "tail";
 
+export type GapsConfig = {
+  inner: number;
+  outer: number;
+};
+
 export type FocusedBorderConfig = {
   color: string;
   width: number;
@@ -38,6 +43,7 @@ export type TesseraConfig = {
   exec: string[];
   focusedBorder: FocusedBorderConfig;
   inspectOverlay: InspectOverlayConfig;
+  gaps: GapsConfig;
 };
 
 export const DEFAULT_CONFIG: TesseraConfig = {
@@ -55,6 +61,7 @@ export const DEFAULT_CONFIG: TesseraConfig = {
     headerColor: "#1aab00",
     background: "rgba(0,0,0,0.52)",
   },
+  gaps: { inner: 0, outer: 0 },
 };
 
 const normalizeMinTileWidth = (value: unknown): number | null => {
@@ -273,6 +280,26 @@ const normalizeInspectOverlay = (value: unknown): InspectOverlayConfig | null =>
   return { textColor, headerColor, background };
 };
 
+const normalizeGaps = (value: unknown): GapsConfig | null => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const candidate = value as { inner?: unknown; outer?: unknown };
+
+  const normalizeGapField = (field: unknown): number => {
+    if (typeof field !== "number" || !Number.isFinite(field)) {
+      return 0;
+    }
+    return Math.max(0, Math.floor(field));
+  };
+
+  return {
+    inner: normalizeGapField(candidate.inner),
+    outer: normalizeGapField(candidate.outer),
+  };
+};
+
 const normalizeExec = (value: unknown): string[] | null => {
   if (!Array.isArray(value)) {
     return null;
@@ -343,6 +370,11 @@ export const applyConfig = (
   const inspectOverlay = normalizeInspectOverlay(candidate.inspectOverlay);
   if (inspectOverlay !== null) {
     target.inspectOverlay = inspectOverlay;
+  }
+
+  const gaps = normalizeGaps(candidate.gaps);
+  if (gaps !== null) {
+    target.gaps = gaps;
   }
 
   return target;

@@ -338,7 +338,7 @@ export const moveHandler: CommandHandler = {
           const reflowRoot = findReflowRoot(sourceParent);
           sourceParent.removeChild(sourceWindow);
           normalizeTree(sourceParent);
-          reflow(reflowRoot);
+          reflow(reflowRoot, context.config.gaps);
           applyLayout(reflowRoot, context.adapter);
         }
 
@@ -364,7 +364,7 @@ export const moveHandler: CommandHandler = {
         if (sourceWindow.floating) {
           targetWorkspace.addFloatingWindow(sourceWindow);
         }
-        reflow(split);
+        reflow(split, context.config.gaps);
         applyLayout(split, context.adapter);
         setFocusedContainer(context.root, sourceWindow);
         targetWorkspace.lastFocusedWindowId = sourceWindow.windowId;
@@ -419,7 +419,7 @@ export const moveHandler: CommandHandler = {
     }
 
     const reflowRoot = findReflowRoot(sourceParent);
-    reflow(reflowRoot);
+    reflow(reflowRoot, context.config.gaps);
     applyLayout(reflowRoot, context.adapter);
 
     return result(true);
@@ -512,7 +512,7 @@ export const resizeHandler: CommandHandler = {
     focused.proportion = Math.max(0.1, nextProportion);
 
     const resizeReflowRoot = findReflowRoot(focused.parent);
-    reflow(resizeReflowRoot);
+    reflow(resizeReflowRoot, context.config.gaps);
     applyLayout(resizeReflowRoot, context.adapter);
 
     return result(true);
@@ -534,7 +534,7 @@ export const splitHandler: CommandHandler = {
     focused.parent.setLayout(value ? Layout.SplitV : Layout.SplitH);
 
     const splitReflowRoot = findReflowRoot(focused.parent);
-    reflow(splitReflowRoot);
+    reflow(splitReflowRoot, context.config.gaps);
     applyLayout(splitReflowRoot, context.adapter);
 
     return result(true);
@@ -557,7 +557,7 @@ export const layoutHandler: CommandHandler = {
       focused.parent.setLayout(toggled);
 
       const toggleReflowRoot = findReflowRoot(focused.parent);
-      reflow(toggleReflowRoot);
+      reflow(toggleReflowRoot, context.config.gaps);
       applyLayout(toggleReflowRoot, context.adapter);
 
       return result(true);
@@ -578,7 +578,7 @@ export const layoutHandler: CommandHandler = {
     focused.parent.setLayout(layout);
 
     const layoutReflowRoot = findReflowRoot(focused.parent);
-    reflow(layoutReflowRoot);
+    reflow(layoutReflowRoot, context.config.gaps);
     applyLayout(layoutReflowRoot, context.adapter);
 
     return result(true);
@@ -619,7 +619,7 @@ export const alternatingHandler: CommandHandler = {
     }
 
     const altReflowRoot = findReflowRoot(parent);
-    reflow(altReflowRoot);
+    reflow(altReflowRoot, context.config.gaps);
     applyLayout(altReflowRoot, context.adapter);
 
     return result(true);
@@ -632,7 +632,7 @@ export const retileHandler: CommandHandler = {
     for (const output of context.root.children) {
       for (const workspace of output.children) {
         if (workspace instanceof WorkspaceContainer) {
-          reflow(workspace);
+          reflow(workspace, context.config.gaps);
           applyLayout(workspace, context.adapter);
         }
       }

@@ -1,6 +1,7 @@
 import { Container, ContainerType } from "./container.js";
 import type { WindowContainer } from "./window-container.js";
 import { getLayoutStrategy } from "../layout/strategy.js";
+import type { GapsConfig } from "../config.js";
 
 export const findReflowRoot = (container: Container): Container => {
   let current: Container = container;
@@ -10,7 +11,7 @@ export const findReflowRoot = (container: Container): Container => {
   return current;
 };
 
-export function reflow(container: Container): void {
+export function reflow(container: Container, gaps?: GapsConfig): void {
   const { children } = container;
   if (children.length === 0) {
     return;
@@ -28,10 +29,10 @@ export function reflow(container: Container): void {
   }
 
   const strategy = getLayoutStrategy(container);
-  strategy.computeRects(container);
+  strategy.computeRects(container, gaps);
 
   layoutChildren.forEach((child) => {
-    reflow(child);
+    reflow(child, gaps);
   });
 }
 

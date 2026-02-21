@@ -114,7 +114,7 @@ describe("reflow", () => {
     reflow(split);
   });
 
-  xit("applies inner gaps when provided (not yet implemented)", () => {
+  it("applies inner gaps when provided", () => {
     const split = new SplitContainer(1, Layout.SplitH);
     split.rect = { x: 0, y: 0, width: 1000, height: 500 };
     const a = makeWindow();
@@ -122,11 +122,33 @@ describe("reflow", () => {
     split.addChild(a);
     split.addChild(b);
 
-    reflow(split, { inner: 10 });
+    reflow(split, { inner: 10, outer: 0 });
 
     expect(a.rect.width).toBe(495);
     expect(b.rect.width).toBe(495);
     expect(b.rect.x).toBe(505);
+  });
+
+  it("applies outer gaps when split is a workspace child", () => {
+    const workspace = new WorkspaceContainer(1, "1", 1, true);
+    workspace.rect = { x: 0, y: 0, width: 1000, height: 500 };
+    const split = new SplitContainer(2, Layout.SplitH);
+    split.rect = { ...workspace.rect };
+    workspace.addChild(split);
+    const a = makeWindow();
+    const b = makeWindow();
+    split.addChild(a);
+    split.addChild(b);
+
+    reflow(split, { inner: 0, outer: 20 });
+
+    // Outer gap of 20 shrinks the available area to 960×460 starting at (20,20)
+    expect(a.rect.x).toBe(20);
+    expect(a.rect.y).toBe(20);
+    expect(a.rect.width).toBe(480);
+    expect(a.rect.height).toBe(460);
+    expect(b.rect.x).toBe(500);
+    expect(b.rect.width).toBe(480);
   });
 
   it("normalizes empty split chains after removal", async () => {
