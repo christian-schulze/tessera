@@ -304,7 +304,38 @@ export class WindowTracker {
 
     signalIds.push(
       window.connect("notify::title", () => {
+        const prevTitle = container.title;
         container.title = window.get_title() ?? "";
+
+        // Re-evaluate rules when the title is populated for the first time.
+        // Some windows (e.g. Chrome's Live Caption) have an empty title at
+        // tracking time and only set it shortly after mapping.
+        if (!prevTitle && container.title) {
+          const { rules } = this.getConfig();
+          appendLog(`rules (title-deferred): title="${container.title}" count=${rules.length} hasExecutor=${!!this.executeForTarget}`);
+          if (rules.length > 0 && this.executeForTarget) {
+            const ruleCommands = evaluateRules(rules, container);
+            appendLog(`rules (title-deferred): matched commands=[${ruleCommands.join(", ")}]`);
+            if (ruleCommands.length > 0) {
+              const executeForTarget = this.executeForTarget;
+              const runRules = () => {
+                if (container.parent) {
+                  for (const cmd of ruleCommands) {
+                    executeForTarget(cmd, container);
+                  }
+                }
+              };
+              if (GLib) {
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 300, () => {
+                  runRules();
+                  return GLib.SOURCE_REMOVE;
+                });
+              } else {
+                runRules();
+              }
+            }
+          }
+        }
       })
     );
 
