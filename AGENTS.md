@@ -37,8 +37,11 @@ Keep changes minimal, match existing conventions, and prefer focused diffs.
 ### Uninstall
 - `make uninstall`
 
-### Restart Extension
-- `make restart`
+### Reload/Restart Extension
+- Reload config in-session: `Super+Shift+R`
+- Re-enable extension manually:
+  - `make disable`
+  - `make enable`
 
 ### Nested Shell (Debugging)
 - `make nested`

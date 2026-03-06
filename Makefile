@@ -11,6 +11,8 @@ help: ## Show this help
 build: ## Compile TypeScript to JavaScript
 	bunx tsc
 	cp metadata.json $(BUILD_DIR)/
+	mkdir -p $(BUILD_DIR)/assets/icons
+	cp assets/icons/tessera-symbolic.svg $(BUILD_DIR)/assets/icons/
 	@echo "Build complete: $(BUILD_DIR)/"
 
 install: build ## Symlink build output into GNOME Shell extensions directory

@@ -33,6 +33,7 @@ import {
   maybeRebuildTree,
   shouldContinuePolling,
 } from "./extension-rebuild.js";
+import { TesseraStatusIndicator } from "./status-indicator.js";
 
 appendLog("module loaded");
 
@@ -61,6 +62,7 @@ export default class TesseraExtension extends Extension {
   private commandService: CommandService | null = null;
   private focusBorder: FocusBorder | null = null;
   private inspectOverlay: InspectOverlay | null = null;
+  private statusIndicator: TesseraStatusIndicator | null = null;
 
   private logToFile(message: string): void {
     appendLog(message);
@@ -383,6 +385,20 @@ export default class TesseraExtension extends Extension {
       this.bindingManager.switchMode("default");
       this.bindingManager.enable();
 
+      const iconPath = GLib.build_filenamev([
+        this.path,
+        "assets",
+        "icons",
+        "tessera-symbolic.svg",
+      ]);
+      this.statusIndicator = new TesseraStatusIndicator({
+        iconPath,
+        onReloadConfig: () => {
+          commandService.execute("reload");
+        },
+      });
+      this.statusIndicator.addToPanel();
+
       const buildDebug = () => {
         const monitorInfos = buildMonitorInfos(Main.layoutManager, global.display, Main.panel as { height: number });
         const workAreas = monitorInfos.map((monitor) => ({
@@ -557,6 +573,8 @@ export default class TesseraExtension extends Extension {
     this.focusBorder = null;
     this.inspectOverlay?.destroy();
     this.inspectOverlay = null;
+    this.statusIndicator?.destroy();
+    this.statusIndicator = null;
     (globalThis as unknown as { __tessera?: TesseraGlobal }).__tessera =
       undefined;
   }

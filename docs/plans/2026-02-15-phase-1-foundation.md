@@ -109,7 +109,7 @@
    REPO_DIR = $(CURDIR)
    BUILD_DIR = $(CURDIR)/dist
 
-   .PHONY: help build install uninstall enable disable restart nested lint test check clean
+   .PHONY: help build install uninstall enable disable nested lint test check clean
 
    help: ## Show this help
    	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -144,9 +144,6 @@
 
    disable: ## Disable the extension
    	gnome-extensions disable $(UUID)
-
-   restart: build ## Rebuild and re-enable the extension
-   	gnome-extensions disable $(UUID) && gnome-extensions enable $(UUID)
 
    nested: ## Launch a nested GNOME Shell session
    	dbus-run-session gnome-shell --devkit --wayland
