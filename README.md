@@ -39,13 +39,9 @@ gnome-extensions enable tessera@tessera.dev
 make nested
 ```
 
-In another terminal:
+IPC is enabled by default. Set `TESSERA_IPC=0` when launching GNOME Shell to disable it.
 
-```bash
-TESSERA_IPC=1 make nested
-```
-
-Then use the IPC CLI:
+In another terminal, use the IPC CLI:
 
 ```bash
 bunx tsx scripts/ipc-run.ts tree

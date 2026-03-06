@@ -1,7 +1,9 @@
 # Tessera Agent Guide
 
-This file is for agentic coding tools operating in this repo.
-Keep changes minimal, match existing conventions, and prefer focused diffs.
+Instructions for coding agents working in this repository.
+
+## Core Rule
+- Keep changes minimal, match existing conventions, and prefer focused diffs.
 
 ## Project Overview
 - Tessera is an i3-like tiling window manager for GNOME Shell.
@@ -9,104 +11,69 @@ Keep changes minimal, match existing conventions, and prefer focused diffs.
 - Extension UUID: `tessera@tessera.dev`.
 
 ## Quick Commands
+- Install deps: `bun install`
+- Build: `make build`
+- Lint: `make lint`
+- Test: `make test`
+- Full check: `make check`
+- Install locally: `make install`
+- Enable extension: `make enable` (or `gnome-extensions enable tessera@tessera.dev`)
+- Disable extension: `make disable`
+- Uninstall: `make uninstall`
 
-### Install Dependencies
-- `bun install`
+Notes:
+- `make` targets are the preferred command interface for agents.
+- Bun equivalents exist in `package.json` (`bun run build|lint|test|check`).
 
-### Build
-- `bun run build`
-- Makefile: `make build`
+## Before Changing Code
+- Review `docs/decisions.md` for prior rationale.
+- Check `docs/learnings.md` for known pitfalls.
 
-### Lint
-- `bun run lint`
-- Makefile: `make lint`
-
-### Test
-- `bun run test`
-- Makefile: `make test`
-
-### Full Check
-- `bun run check`
-- Makefile: `make check`
-
-### Install/Enable Extension Locally
-- `make build`
-- `make install`
-- `gnome-extensions enable tessera@tessera.dev`
-
-### Uninstall
-- `make uninstall`
-
-### Reload/Restart Extension
-- Reload config in-session: `Super+Shift+R`
-- Re-enable extension manually:
-  - `make disable`
-  - `make enable`
-
-### Nested Shell (Debugging)
-- `make nested`
-- `TESSERA_IPC=1 make nested` (explicit IPC)
-
-### Looking Glass (Debug)
-- `make looking-glass`
-
-### IPC Debug Helpers
-- `make ipc-tree`
-- `make ipc-debug`
-  - Requires an active Tessera IPC socket (normal or nested session).
-
-## Running a Single Test
-
-Tests run with Jasmine via tsx and a config file.
-
-### Run One Test File
-- `bunx tsx ./node_modules/jasmine/bin/jasmine.js --config=tests/jasmine.json --spec=tests/unit/commands/parser.test.ts`
-
-### Run One Test by Name
-- `bunx tsx ./node_modules/jasmine/bin/jasmine.js --config=tests/jasmine.json --filter="parser"`
-
-### Common Test Locations
-- `tests/unit/**/*.test.ts`
-
-## Code Style and Conventions
+## Must-Follow Conventions
 
 ### TypeScript / ESM
 - Use ESM imports with explicit `.js` extensions for local modules.
 - Prefer `import type` for type-only imports.
-- Keep `strict` typing; avoid `any`.
-- Use `unknown` for external values and narrow with checks or casts.
-- Prefer explicit return types for exported helpers and public APIs.
+- Keep strict typing; avoid `any`.
+- Use `unknown` for external values and narrow before use.
 
-### Imports
+### Imports and Formatting
 - Order imports as: external URLs, `gi://` modules, then local relative imports.
-- Group related imports and avoid unused imports.
+- Follow existing formatting in touched files.
+- Avoid formatting-only diffs unless required.
 
-### Formatting
-- Follow existing formatting in the file; keep diffs minimal.
-- Avoid reformat-only changes unless necessary for your work.
-
-### Naming
-- Use `camelCase` for variables/functions, `PascalCase` for types/classes.
-- Enums use `PascalCase` names with string values.
-- Booleans read as predicates (`isEnabled`, `hasFocus`, `canSplit`).
-
-### Functions and Classes
-- Prefer `const name = (...) => {}` for functions.
-- Keep functions small and focused.
-- Avoid mutating shared state unless required.
-- Use private fields with explicit types and nullable state for lifecycle.
-
-### Error Handling
+### Runtime / Error Handling
 - Do not throw across IPC boundaries; return `{ ok: false, error: ... }`.
 - Use `try/catch` where GNOME Shell operations may fail.
-- Use `logError` for GNOME Shell logging when catching unexpected errors.
-- Clean up resources on stop/disable, and ignore safe cleanup failures.
+- Use `logError` when catching unexpected GNOME Shell errors.
+- Ensure enable/disable cleanly creates and tears down signals/objects.
 
-### GNOME Shell Guidelines
+### GNOME Shell Constraints
 - Avoid deprecated modules (Lang, ByteArray, Mainloop).
 - Do not use GTK inside GNOME Shell.
-- Ensure enable/disable cleanly creates and tears down signals/objects.
 - Do not ship obfuscated or minified code.
+
+## Debugging
+- Tail extension logs: `make logs` (`~/.local/state/tessera/tessera.log`)
+- Run nested shell: `make nested` (IPC is enabled by default; set `TESSERA_IPC=0` to disable)
+- Tail nested logs: `make logs-nested` (`~/.local/state/tessera/nested-gnome-shell.log`)
+- IPC helpers: `make ipc-tree`, `make ipc-debug`
+- Looking Glass: `make looking-glass`
+- Log timestamps are in UTC (not local time).
+
+### Agent Debugging Workflow (Do This First)
+- Do not ask the user to paste logs until you have attempted to read available logs directly.
+- Prefer self-service diagnostics first (`make logs`, `make logs-nested`, `make ipc-tree`, `make ipc-debug`, and direct log-file reads).
+- Include relevant command output and concise log excerpts in your response.
+- Ask the user for additional logs only if required context is inaccessible from the agent session.
+- If you need user input, request the smallest specific artifact (exact command and short range), not entire logs.
+- Use Python for JSON parsing/inspection when analyzing structured logs or command output.
+
+## Running Targeted Tests
+- Single test file:
+  - `bunx tsx ./node_modules/jasmine/bin/jasmine.js --config=tests/jasmine.json --spec=tests/unit/commands/parser.test.ts`
+- Filter by name:
+  - `bunx tsx ./node_modules/jasmine/bin/jasmine.js --config=tests/jasmine.json --filter="parser"`
 
 ## Project Structure
 - `src/` TypeScript source for extension logic.
@@ -114,33 +81,9 @@ Tests run with Jasmine via tsx and a config file.
 - `src/commands/` Command parsing and handlers.
 - `src/tree/` Container tree and layout logic.
 - `tests/` Jasmine unit tests.
-- `dist/` Build output (ignored by lint).
-
-## Configuration and IPC
-- Local config file: `~/.config/tessera/config.js` (module.exports settings).
-- Runtime config via IPC:
-  - `bunx tsx scripts/ipc-run.ts config 300`
-  - `bunx tsx scripts/ipc-run.ts execute "splitv; focus right"`
-
-## Tooling Notes
-- TypeScript builds to `dist/` with `module=NodeNext`.
-- ESLint ignores `dist/`, `node_modules/`, and `tests/`.
-- Jasmine runs specs from `tests/unit/**/*.test.ts`.
+- `dist/` Build output.
 
 ## Working with Changes
 - Keep commits focused; avoid mixing refactors with behavior changes.
 - Prefer small, incremental edits to minimize risk in GNOME Shell.
 - If adding new IPC handlers, update types and tests together.
-
-## Debugging
-- Check `docs/learnings.md` and `docs/decisions.md` before starting.
-- Use `make logs` to tail `~/.local/state/tessera/tessera.log` when investigating extension behavior.
-- `make nested` appends GNOME Shell output to `~/.local/state/tessera/nested-gnome-shell.log`.
-- Use `make logs-nested` to tail `~/.local/state/tessera/nested-gnome-shell.log`.
-- Use `make ipc-tree` or `make ipc-debug` to query IPC state.
-
-## Planning
-- Review `docs/decisions.md` for prior rationale before proposing changes.
-
-## No Cursor/Copilot Rules Found
-- `.cursor/rules/`, `.cursorrules`, and `.github/copilot-instructions.md` not present.
