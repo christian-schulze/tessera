@@ -515,9 +515,15 @@ export default class TesseraExtension extends Extension {
         }
       };
 
-      if (GLib.getenv("TESSERA_IPC") === "1") {
+      const ipcEnv = GLib.getenv("TESSERA_IPC");
+      if (ipcEnv !== "0") {
         this.ipcServer = new IpcServer();
         this.ipcServer.start(tesseraService);
+        this.logToFile(
+          `[tessera ipc] enabled env=${ipcEnv ?? "<unset>"} socket=${this.ipcServer.getSocketPath() ?? "<none>"}`
+        );
+      } else {
+        this.logToFile("[tessera ipc] disabled via TESSERA_IPC=0");
       }
 
       (globalThis as unknown as { __tessera?: TesseraGlobal }).__tessera = {
