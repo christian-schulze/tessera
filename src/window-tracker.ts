@@ -9,6 +9,7 @@ import { applyLayout } from "./tree/apply-layout.js";
 import type { WindowAdapter } from "./commands/adapter.js";
 import type { TesseraConfig } from "./config.js";
 import { updateFocusedWindow } from "./window-tracker-focus.js";
+import { findWorkspaceForWindow } from "./window-workspace.js";
 import { getLayoutStrategy } from "./layout/strategy.js";
 import { appendLog } from "./logging.js";
 import { insertWindowWithStrategy } from "./window-insertion.js";
@@ -179,7 +180,16 @@ export class WindowTracker {
       return;
     }
 
-    const workspace = this.getActiveWorkspace();
+    const activeWorkspace = this.getActiveWorkspace();
+    if (!activeWorkspace) {
+      return;
+    }
+
+    const workspace = findWorkspaceForWindow(
+      this.root,
+      window as unknown as { get_workspace?: () => { index?: (() => number) | number; get_index?: () => number } | null },
+      activeWorkspace
+    );
     if (!workspace) {
       return;
     }

@@ -52,3 +52,19 @@ export const findWorkspaceByIndex = (
 
   return null;
 };
+
+export const findWorkspaceForWindow = (
+  root: Container,
+  window: WorkspaceWindowLike,
+  fallback: WorkspaceContainer | null
+): WorkspaceContainer | null => {
+  const workspaceIndex = getWorkspaceIndexFromWindow(window);
+  if (workspaceIndex !== null) {
+    const workspace = findWorkspaceByIndex(root, workspaceIndex);
+    if (workspace) {
+      return workspace;
+    }
+  }
+
+  return fallback;
+};
