@@ -21,6 +21,7 @@ export interface CommandServiceDeps {
   dumpDebug?: () => void;
   dumpTree?: () => void;
   toggleInspect?: () => void;
+  toggleBindingHelp?: () => void;
   refreshInspect?: (container: WindowContainer) => void;
 }
 
@@ -51,6 +52,7 @@ export function buildCommandService(deps: CommandServiceDeps): CommandService {
       dumpDebug: deps.dumpDebug,
       dumpTree: deps.dumpTree,
       toggleInspect: deps.toggleInspect,
+      toggleBindingHelp: deps.toggleBindingHelp,
       refreshInspect: deps.refreshInspect,
     });
   };

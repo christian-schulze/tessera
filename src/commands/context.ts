@@ -15,5 +15,6 @@ export interface CommandContext {
   dumpDebug?: () => void;
   dumpTree?: () => void;
   toggleInspect?: () => void;
+  toggleBindingHelp?: () => void;
   refreshInspect?: (container: WindowContainer) => void;
 }

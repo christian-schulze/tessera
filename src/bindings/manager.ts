@@ -26,19 +26,21 @@ type BindingManagerDeps = {
   executeCommand: (command: string) => void;
   display?: Display;
   notify?: (message: string) => void;
+  onModeChanged?: (mode: BindingMode) => void;
 };
 
 export class BindingManager {
   private readonly display: Display;
   private readonly executeCommand: (command: string) => void;
   private readonly notify: (message: string) => void;
+  private readonly onModeChanged: (mode: BindingMode) => void;
   private modes = new Map<string, BindingMode>();
   private activeMode: string | null = null;
   private enabled = false;
   private activeBindings = new Map<number, BindingEntry>();
   private signalId: number | null = null;
 
-  constructor({ executeCommand, display, notify }: BindingManagerDeps) {
+  constructor({ executeCommand, display, notify, onModeChanged }: BindingManagerDeps) {
     this.display = display ?? (global as unknown as { display: Display }).display;
     this.executeCommand = executeCommand;
     this.notify =
@@ -50,6 +52,7 @@ export class BindingManager {
         }
         appendLog(`notification unavailable: ${message}`);
       });
+    this.onModeChanged = onModeChanged ?? (() => {});
   }
 
   addMode(mode: BindingMode): void {
@@ -61,6 +64,13 @@ export class BindingManager {
 
   getActiveMode(): string | null {
     return this.activeMode;
+  }
+
+  getActiveModeDefinition(): BindingMode | null {
+    if (!this.activeMode) {
+      return null;
+    }
+    return this.modes.get(this.activeMode) ?? null;
   }
 
   enable(): void {
@@ -103,6 +113,10 @@ export class BindingManager {
     }
 
     this.activeMode = name;
+    const mode = this.modes.get(name);
+    if (mode) {
+      this.onModeChanged(mode);
+    }
     if (!this.enabled) {
       return true;
     }

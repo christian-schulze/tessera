@@ -17,6 +17,7 @@ import {
 import type { CommandServiceDeps, CommandService } from "./commands/service.js";
 import { buildDefaultBindingModes } from "./bindings/defaults.js";
 import { BindingManager } from "./bindings/manager.js";
+import type { Binding } from "./bindings/mode.js";
 import { reloadBindings } from "./bindings/reload.js";
 import { buildCommandService } from "./commands/service.js";
 import type { WindowAdapter } from "./commands/adapter.js";
@@ -27,6 +28,7 @@ import { buildDebugPayload } from "./ipc/debug.js";
 import { DEFAULT_CONFIG, applyConfig, loadConfig, type TesseraConfig } from "./config.js";
 import { FocusBorder } from "./focus-border.js";
 import { InspectOverlay } from "./inspect-overlay.js";
+import { BindingHelpOverlay } from "./binding-help-overlay.js";
 import { WindowContainer } from "./tree/window-container.js";
 import { appendLog, writeSnapshot } from "./logging.js";
 import {
@@ -62,6 +64,7 @@ export default class TesseraExtension extends Extension {
   private commandService: CommandService | null = null;
   private focusBorder: FocusBorder | null = null;
   private inspectOverlay: InspectOverlay | null = null;
+  private bindingHelpOverlay: BindingHelpOverlay | null = null;
   private statusIndicator: TesseraStatusIndicator | null = null;
 
   private logToFile(message: string): void {
@@ -82,6 +85,18 @@ export default class TesseraExtension extends Extension {
   private applyInspectOverlayConfig(): void {
     this.inspectOverlay?.destroy();
     this.inspectOverlay = new InspectOverlay(this.config.inspectOverlay);
+  }
+
+  private activeBindingModeSnapshot(): { name: string; bindings: Binding[] } | null {
+    const mode = this.bindingManager?.getActiveModeDefinition();
+    if (!mode) {
+      return null;
+    }
+
+    return {
+      name: mode.name,
+      bindings: mode.bindings.map((binding) => ({ ...binding, keys: [...binding.keys] })),
+    };
   }
 
   private rebuildTree(reason: string, monitorsOverride?: MonitorInfo[]): void {
@@ -245,6 +260,8 @@ export default class TesseraExtension extends Extension {
       this.rebuildTree("initial");
       this.applyFocusBorderConfig();
       this.applyInspectOverlayConfig();
+      this.bindingHelpOverlay?.destroy();
+      this.bindingHelpOverlay = new BindingHelpOverlay();
       GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
         this.rebuildTree("idle");
         return GLib.SOURCE_REMOVE;
@@ -385,6 +402,15 @@ export default class TesseraExtension extends Extension {
         executeCommand: (command) => {
           commandService.execute(command);
         },
+        onModeChanged: () => {
+          if (!this.bindingHelpOverlay?.isShown()) {
+            return;
+          }
+          const mode = this.activeBindingModeSnapshot();
+          if (mode) {
+            this.bindingHelpOverlay.refresh(mode);
+          }
+        },
       });
       const modes = this.config.modes ?? buildDefaultBindingModes();
       for (const mode of modes) {
@@ -524,6 +550,13 @@ export default class TesseraExtension extends Extension {
           this.inspectOverlay?.toggle(focused);
         }
       };
+      commandServiceDeps.toggleBindingHelp = () => {
+        const mode = this.activeBindingModeSnapshot();
+        if (!mode) {
+          return;
+        }
+        this.bindingHelpOverlay?.toggle(mode);
+      };
 
       const ipcEnv = GLib.getenv("TESSERA_IPC");
       if (ipcEnv !== "0") {
@@ -589,6 +622,8 @@ export default class TesseraExtension extends Extension {
     this.focusBorder = null;
     this.inspectOverlay?.destroy();
     this.inspectOverlay = null;
+    this.bindingHelpOverlay?.destroy();
+    this.bindingHelpOverlay = null;
     this.statusIndicator?.destroy();
     this.statusIndicator = null;
     (globalThis as unknown as { __tessera?: TesseraGlobal }).__tessera =

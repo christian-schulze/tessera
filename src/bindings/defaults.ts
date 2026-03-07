@@ -38,6 +38,7 @@ export const buildDefaultBindingModes = (): BindingMode[] => [
       { keys: ["<Super><Shift>f"], command: "floating toggle" },
       { keys: ["<Super><Shift>s"], command: "sticky toggle" },
       { keys: ["<Super>i"], command: "inspect" },
+      { keys: ["<Super><Shift>slash"], command: "binding-help" },
       { keys: ["<Super><Shift>q"], command: "kill" },
       { keys: ["<Super><Shift>r"], command: "reload" },
       { keys: ["<Super><Shift>t"], command: "retile" },

@@ -138,7 +138,10 @@ When `modes` is omitted or `null`, these defaults are used:
 | `Super+Shift+F` | Toggle floating |
 | `Super+Shift+S` | Toggle sticky (floating windows only) |
 | `Super+I` | Show/hide window inspect overlay |
+| `Super+Shift+?` | Show/hide binding help overlay |
 | `Super+Shift+Q` | Close focused window |
+
+Binding help overlay visibility is toggle-only by default: once shown, it stays visible across focus and workspace changes until toggled off.
 | `Super+Shift+R` | Reload config |
 | `Super+Shift+T` | Retile (reapply layout to all windows) |
 | `Super+Shift+D` | Dump debug snapshot to `~/.local/state/tessera/debug.log` |

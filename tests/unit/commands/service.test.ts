@@ -78,4 +78,53 @@ describe("command service", () => {
 
     expect(captured).toEqual({ root, focused: null, adapter });
   });
+
+  it("passes toggleBindingHelp callback to engine context", () => {
+    const root = {};
+    const adapter = {
+      activate: () => {},
+      moveResize: () => {},
+      setFullscreen: () => {},
+      setFloating: () => {},
+      close: () => {},
+      exec: () => {},
+      changeWorkspace: () => {},
+      moveToWorkspace: () => {},
+    } as WindowAdapter;
+
+    const toggleBindingHelp = jasmine.createSpy("toggleBindingHelp");
+    let capturedToggle: (() => void) | undefined;
+    const engine = {
+      executeBatch: (
+        _commands: unknown,
+        context: {
+          root: unknown;
+          focused: unknown;
+          adapter: WindowAdapter;
+          config: unknown;
+          toggleBindingHelp?: () => void;
+        }
+      ) => {
+        capturedToggle = context.toggleBindingHelp;
+        return [{ success: true }];
+      },
+    } as unknown as CommandEngine;
+
+    const service = buildCommandService({
+      engine,
+      adapter,
+      getRoot: () => root as never,
+      getConfig: () => ({
+        minTileWidth: 300,
+        minTileHeight: 240,
+        alternatingMode: "focused",
+      }),
+      getFocused: () => null,
+      toggleBindingHelp,
+    });
+
+    service.execute("binding-help");
+
+    expect(capturedToggle).toBe(toggleBindingHelp);
+  });
 });
