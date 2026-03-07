@@ -64,6 +64,7 @@ Notes:
 ### Agent Debugging Workflow (Do This First)
 - Do not ask the user to paste logs until you have attempted to read available logs directly.
 - Prefer self-service diagnostics first (`make logs`, `make logs-nested`, `make ipc-tree`, `make ipc-debug`, and direct log-file reads).
+- `make logs` and `make logs-nested` already follow/tail internally; do not pipe them to `tail`/`head` in automation (they will not terminate). For bounded output, read the log files directly (e.g. `read ~/.local/state/tessera/tessera.log` with offsets or `tail -n` on the file path itself).
 - Include relevant command output and concise log excerpts in your response.
 - Ask the user for additional logs only if required context is inaccessible from the agent session.
 - If you need user input, request the smallest specific artifact (exact command and short range), not entire logs.

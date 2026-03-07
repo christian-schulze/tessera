@@ -180,6 +180,171 @@ describe("Core command handlers", () => {
     expect(adapter.movedTo).toEqual([{ window, index: 1, focus: false }]);
   });
 
+  it("move container to workspace refreshes inspect overlay", () => {
+    const window = {};
+    const focused = new WindowContainer(1, window, 1, "app", "title");
+    const refreshed: WindowContainer[] = [];
+    const adapter = {
+      activated: [] as unknown[],
+      movedTo: [] as Array<{ window: unknown; index: number; focus: boolean }>,
+      activate(target: unknown) {
+        this.activated.push(target);
+      },
+      moveResize: jasmine.createSpy("moveResize"),
+      setFullscreen: () => {},
+      setFloating: () => {},
+      close: () => {},
+      exec: () => {},
+      changeWorkspace: () => {},
+      moveToWorkspace(window: unknown, index: number, focus: boolean) {
+        this.movedTo.push({ window, index, focus });
+      },
+    };
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
+
+    const result = moveHandler.execute(
+      makeCommand("move", ["container", "to", "workspace", "2"]),
+      {
+        root: focused as any,
+        focused,
+        adapter,
+        config,
+        refreshInspect: (container) => {
+          refreshed.push(container);
+        },
+      }
+    );
+
+    expect(result.success).toBeTrue();
+    expect(refreshed).toEqual([focused]);
+    expect(adapter.movedTo).toEqual([{ window, index: 1, focus: false }]);
+  });
+
+  it("move container to workspace unsticks sticky windows", () => {
+    const window = {};
+    const focused = new WindowContainer(1, window, 1, "app", "title");
+    focused.floating = true;
+    focused.sticky = true;
+
+    const adapter = {
+      movedTo: [] as Array<{ window: unknown; index: number; focus: boolean }>,
+      sticky: [] as Array<{ window: unknown; value: boolean }>,
+      activate: () => {},
+      moveResize: jasmine.createSpy("moveResize"),
+      setFullscreen: () => {},
+      setFloating: () => {},
+      setSticky(window: unknown, value: boolean) {
+        this.sticky.push({ window, value });
+      },
+      close: () => {},
+      exec: () => {},
+      changeWorkspace: () => {},
+      moveToWorkspace(window: unknown, index: number, focus: boolean) {
+        this.movedTo.push({ window, index, focus });
+      },
+    };
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
+
+    const result = moveHandler.execute(
+      makeCommand("move", ["container", "to", "workspace", "2"]),
+      {
+        root: focused as any,
+        focused,
+        adapter,
+        config,
+      }
+    );
+
+    expect(result.success).toBeTrue();
+    expect(focused.sticky).toBeFalse();
+    expect(adapter.sticky).toEqual([{ window, value: false }]);
+    expect(adapter.movedTo).toEqual([{ window, index: 1, focus: false }]);
+  });
+
+  it("move container to workspace enforces non-sticky state even when tree state is stale", () => {
+    const window = {
+      is_on_all_workspaces: () => true,
+    };
+    const focused = new WindowContainer(1, window, 1, "app", "title");
+    focused.floating = true;
+    focused.sticky = false;
+
+    const adapter = {
+      movedTo: [] as Array<{ window: unknown; index: number; focus: boolean }>,
+      sticky: [] as Array<{ window: unknown; value: boolean }>,
+      activate: () => {},
+      moveResize: jasmine.createSpy("moveResize"),
+      setFullscreen: () => {},
+      setFloating: () => {},
+      setSticky(window: unknown, value: boolean) {
+        this.sticky.push({ window, value });
+      },
+      close: () => {},
+      exec: () => {},
+      changeWorkspace: () => {},
+      moveToWorkspace(window: unknown, index: number, focus: boolean) {
+        this.movedTo.push({ window, index, focus });
+      },
+    };
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
+
+    const result = moveHandler.execute(
+      makeCommand("move", ["container", "to", "workspace", "2"]),
+      {
+        root: focused as any,
+        focused,
+        adapter,
+        config,
+      }
+    );
+
+    expect(result.success).toBeTrue();
+    expect(focused.sticky).toBeFalse();
+    expect(adapter.sticky).toEqual([{ window, value: false }]);
+    expect(adapter.movedTo).toEqual([{ window, index: 1, focus: false }]);
+  });
+
+  it("move container to workspace does not touch sticky state for non-sticky windows", () => {
+    const window = {
+      is_on_all_workspaces: () => false,
+    };
+    const focused = new WindowContainer(1, window, 1, "app", "title");
+    focused.floating = true;
+
+    const adapter = {
+      movedTo: [] as Array<{ window: unknown; index: number; focus: boolean }>,
+      sticky: [] as Array<{ window: unknown; value: boolean }>,
+      activate: () => {},
+      moveResize: jasmine.createSpy("moveResize"),
+      setFullscreen: () => {},
+      setFloating: () => {},
+      setSticky(window: unknown, value: boolean) {
+        this.sticky.push({ window, value });
+      },
+      close: () => {},
+      exec: () => {},
+      changeWorkspace: () => {},
+      moveToWorkspace(window: unknown, index: number, focus: boolean) {
+        this.movedTo.push({ window, index, focus });
+      },
+    };
+    const config = { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const };
+
+    const result = moveHandler.execute(
+      makeCommand("move", ["container", "to", "workspace", "2"]),
+      {
+        root: focused as any,
+        focused,
+        adapter,
+        config,
+      }
+    );
+
+    expect(result.success).toBeTrue();
+    expect(adapter.sticky).toEqual([]);
+    expect(adapter.movedTo).toEqual([{ window, index: 1, focus: false }]);
+  });
+
   it("move container to workspace updates tree", () => {
     const root = new RootContainer(1);
     const output = new OutputContainer(2, 0, { x: 0, y: 0, width: 200, height: 100 });

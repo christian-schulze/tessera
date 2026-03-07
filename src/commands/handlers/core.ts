@@ -75,6 +75,17 @@ const findWorkspaceByNumber = (root: Container, number: number): WorkspaceContai
   return null;
 };
 
+const isWindowSticky = (container: WindowContainer): boolean => {
+  if (container.sticky) {
+    return true;
+  }
+
+  const metaWindow = container.window as {
+    is_on_all_workspaces?: () => boolean;
+  };
+  return metaWindow.is_on_all_workspaces?.() ?? false;
+};
+
 const findSplitTarget = (workspace: WorkspaceContainer, defaultAlternating = true): SplitContainer => {
   const existing = workspace.children.find(
     (child) => child.type === ContainerType.Split
@@ -386,6 +397,10 @@ export const moveHandler: CommandHandler = {
       if (!sourceWindow) {
         return result(false, "No focused window");
       }
+      if (isWindowSticky(sourceWindow)) {
+        sourceWindow.sticky = false;
+        context.adapter.setSticky?.(sourceWindow.window, false);
+      }
       const currentWorkspace = findWorkspaceForContainer(sourceWindow);
       const targetWorkspace = findWorkspaceByNumber(context.root, index);
       appendLog(`move-to-workspace: index=${index} found=${!!targetWorkspace} rootChildren=${context.root.children.length}`);
@@ -431,6 +446,7 @@ export const moveHandler: CommandHandler = {
       }
 
       context.adapter.moveToWorkspace(sourceWindow.window, index - 1, false);
+      context.refreshInspect?.(sourceWindow);
       return result(true);
     }
 

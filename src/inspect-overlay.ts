@@ -1,4 +1,4 @@
-import type { WindowContainer } from "./tree/window-container.js";
+import { WindowContainer } from "./tree/window-container.js";
 import { ContainerType, Layout } from "./tree/container.js";
 import { WorkspaceContainer } from "./tree/workspace-container.js";
 import type { Container } from "./tree/container.js";
@@ -64,6 +64,32 @@ const findWorkspace = (container: Container): WorkspaceContainer | null => {
   return null;
 };
 
+export const isContainerOnActiveWorkspace = (
+  container: Container,
+  activeWorkspaceIndex: number | null
+): boolean => {
+  if (container instanceof WindowContainer) {
+    if (container.sticky) {
+      return true;
+    }
+    const metaWindow = container.window as {
+      is_on_all_workspaces?: () => boolean;
+    };
+    if (metaWindow.is_on_all_workspaces?.()) {
+      return true;
+    }
+  }
+
+  if (activeWorkspaceIndex === null) {
+    return true;
+  }
+  const workspace = findWorkspace(container);
+  if (!workspace) {
+    return true;
+  }
+  return workspace.number - 1 === activeWorkspaceIndex;
+};
+
 const makeLabel = (text: string, config: InspectOverlayConfig, muted = false): StWidget => {
   const color = muted ? config.headerColor : config.textColor;
   const label = new St.Label({
@@ -90,6 +116,14 @@ export class InspectOverlay {
       }
     | null = null;
   private unmanagedSignalId: number | null = null;
+  private workspaceManager:
+    | {
+        connect?: (signal: string, callback: () => void) => number;
+        disconnect?: (id: number) => void;
+        get_active_workspace_index?: () => number;
+      }
+    | null = null;
+  private workspaceSignalId: number | null = null;
 
   constructor(config: InspectOverlayConfig) {
     this.config = config;
@@ -105,9 +139,33 @@ export class InspectOverlay {
 
     const group = global.window_group as ClutterActor;
     group.add_child(this.panel);
+
+    const workspaceManager = global.workspace_manager as {
+      connect?: (signal: string, callback: () => void) => number;
+      disconnect?: (id: number) => void;
+      get_active_workspace_index?: () => number;
+    };
+    this.workspaceManager = workspaceManager ?? null;
+    if (typeof workspaceManager?.connect === "function") {
+      this.workspaceSignalId = workspaceManager.connect("active-workspace-changed", () => {
+        if (!this.isVisible || !this.inspectedContainer) {
+          return;
+        }
+        if (!this.isOnActiveWorkspace(this.inspectedContainer)) {
+          this.panel.hide();
+          return;
+        }
+        this.refresh(this.inspectedContainer);
+      });
+    }
   }
 
   show(container: WindowContainer): void {
+    if (!this.isOnActiveWorkspace(container)) {
+      this.panel.hide();
+      return;
+    }
+
     this.buildContent(container);
     this.inspectedWindowId = container.windowId;
     this.inspectedContainer = container;
@@ -127,6 +185,11 @@ export class InspectOverlay {
     }
 
     if (this.inspectedWindowId !== container.windowId) {
+      return;
+    }
+
+    if (!this.isOnActiveWorkspace(container)) {
+      this.panel.hide();
       return;
     }
 
@@ -156,6 +219,15 @@ export class InspectOverlay {
 
   destroy(): void {
     this.disconnectWindowActor();
+    if (
+      this.workspaceManager &&
+      typeof this.workspaceManager.disconnect === "function" &&
+      this.workspaceSignalId !== null
+    ) {
+      this.workspaceManager.disconnect(this.workspaceSignalId);
+    }
+    this.workspaceSignalId = null;
+    this.workspaceManager = null;
     this.panel.destroy();
   }
 
@@ -211,6 +283,11 @@ export class InspectOverlay {
     const meta = container.window as { get_frame_rect?: () => { x: number; y: number } };
     const rect = meta.get_frame_rect?.() ?? container.rect;
     this.panel.set_position(rect.x + 16, rect.y + 16);
+  }
+
+  private isOnActiveWorkspace(container: WindowContainer): boolean {
+    const activeWorkspaceIndex = this.workspaceManager?.get_active_workspace_index?.() ?? null;
+    return isContainerOnActiveWorkspace(container, activeWorkspaceIndex);
   }
 
   private buildContent(container: WindowContainer): void {
