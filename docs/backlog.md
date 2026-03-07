@@ -19,6 +19,8 @@ This document tracks future features and enhancements. Add new ideas here as the
 ## Visual Focus
 
 - ~~Render a focused-window border using GNOME Shell actor styling (frame-only) with configurable color and width.~~ **Done** — `focusedBorder: { color, width }` in config; implemented as 4 inset `St.Widget` bars on `global.window_group` (`src/focus-border.ts`).
+- Ensure focused borders for underlying tiled windows do not render above overlapping floating windows.
+- Make inspect overlay content live-update while it is open (e.g., after `floating/sticky/fullscreen` toggles via keybindings).
 
 ## Layout Gaps
 

@@ -135,6 +135,7 @@ When `modes` is omitted or `null`, these defaults are used:
 | `Super+E` | Toggle split layout |
 | `Super+Shift+E` | Toggle alternating mode on focused split |
 | `Super+F` | Toggle fullscreen |
+| `Super+Shift+F` | Toggle floating |
 | `Super+Shift+S` | Toggle sticky (floating windows only) |
 | `Super+I` | Show/hide window inspect overlay |
 | `Super+Shift+Q` | Close focused window |
