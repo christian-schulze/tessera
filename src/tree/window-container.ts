@@ -7,6 +7,7 @@ export interface WindowJSON extends ContainerJSON {
   title: string;
   window_type: number;
   floating: boolean;
+  sticky: boolean;
   fullscreen: boolean;
 }
 
@@ -17,6 +18,7 @@ export class WindowContainer extends Container {
   title: string;
   window_type: number;
   floating: boolean;
+  sticky: boolean;
   fullscreen: boolean;
 
   constructor(
@@ -34,6 +36,7 @@ export class WindowContainer extends Container {
     this.title = title;
     this.window_type = window_type;
     this.floating = false;
+    this.sticky = false;
     this.fullscreen = false;
   }
 
@@ -45,6 +48,7 @@ export class WindowContainer extends Container {
       title: this.title,
       window_type: this.window_type,
       floating: this.floating,
+      sticky: this.sticky,
       fullscreen: this.fullscreen,
     };
   }

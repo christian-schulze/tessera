@@ -9,6 +9,7 @@ import {
   unmarkHandler,
   floatingHandler,
   fullscreenHandler,
+  stickyHandler,
 } from "../../../../src/commands/handlers/workspace.ts";
 
 describe("Workspace and window state handlers", () => {
@@ -21,6 +22,7 @@ describe("Workspace and window state handlers", () => {
 
   const makeAdapter = () => ({
     floating: [] as Array<{ window: unknown; value: boolean }>,
+    sticky: [] as Array<{ window: unknown; value: boolean }>,
     fullscreen: [] as Array<{ window: unknown; value: boolean }>,
     activated: [] as unknown[],
     activate(window: unknown) {
@@ -32,6 +34,9 @@ describe("Workspace and window state handlers", () => {
     },
     setFloating(window: unknown, value: boolean) {
       this.floating.push({ window, value });
+    },
+    setSticky(window: unknown, value: boolean) {
+      this.sticky.push({ window, value });
     },
     close: () => {},
     exec: () => {},
@@ -252,5 +257,59 @@ describe("Workspace and window state handlers", () => {
     expect(result.success).toBeTrue();
     expect(focused.fullscreen).toBeTrue();
     expect(adapter.fullscreen).toEqual([{ window, value: true }]);
+  });
+
+  it("toggles sticky on focused floating windows", () => {
+    const window = {};
+    const focused = new WindowContainer(1, window, 1, "app", "title");
+    focused.floating = true;
+    const adapter = makeAdapter();
+
+    const result = stickyHandler.execute(makeCommand("sticky", ["toggle"]), {
+      root: focused as any,
+      focused,
+      adapter,
+      config: { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const },
+    });
+
+    expect(result.success).toBeTrue();
+    expect(focused.sticky).toBeTrue();
+    expect(adapter.sticky).toEqual([{ window, value: true }]);
+  });
+
+  it("rejects sticky enable on non-floating windows", () => {
+    const window = {};
+    const focused = new WindowContainer(1, window, 1, "app", "title");
+    const adapter = makeAdapter();
+
+    const result = stickyHandler.execute(makeCommand("sticky", ["enable"]), {
+      root: focused as any,
+      focused,
+      adapter,
+      config: { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const },
+    });
+
+    expect(result.success).toBeFalse();
+    expect(result.message).toBe("Sticky requires a floating window");
+    expect(focused.sticky).toBeFalse();
+    expect(adapter.sticky).toEqual([]);
+  });
+
+  it("allows sticky toggle off on non-floating windows", () => {
+    const window = {};
+    const focused = new WindowContainer(1, window, 1, "app", "title");
+    focused.sticky = true;
+    const adapter = makeAdapter();
+
+    const result = stickyHandler.execute(makeCommand("sticky", ["toggle"]), {
+      root: focused as any,
+      focused,
+      adapter,
+      config: { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const },
+    });
+
+    expect(result.success).toBeTrue();
+    expect(focused.sticky).toBeFalse();
+    expect(adapter.sticky).toEqual([{ window, value: false }]);
   });
 });

@@ -89,6 +89,16 @@ const matchesCriterion = (container: Container, criterion: CommandCriteria): boo
         return false;
       }
       return evaluateBoolean(!container.floating, criterion.operator, criterion.value);
+    case "sticky":
+      if (!(container instanceof WindowContainer)) {
+        return false;
+      }
+      return evaluateBoolean(container.sticky, criterion.operator, criterion.value);
+    case "non_sticky":
+      if (!(container instanceof WindowContainer)) {
+        return false;
+      }
+      return evaluateBoolean(!container.sticky, criterion.operator, criterion.value);
     case "window_type":
       if (!(container instanceof WindowContainer)) {
         return false;

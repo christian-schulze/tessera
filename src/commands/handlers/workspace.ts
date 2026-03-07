@@ -237,6 +237,34 @@ export const floatingHandler: CommandHandler = {
   },
 };
 
+export const stickyHandler: CommandHandler = {
+  action: "sticky",
+  execute: (command, context) => {
+    const focused = context.focused;
+    if (!(focused instanceof WindowContainer)) {
+      return result(false, "Focused container is not a window");
+    }
+
+    const mode = command.args[0] ?? "toggle";
+    let sticky = focused.sticky;
+    if (mode === "toggle") {
+      sticky = !focused.sticky;
+    } else if (mode === "enable" || mode === "on") {
+      sticky = true;
+    } else if (mode === "disable" || mode === "off") {
+      sticky = false;
+    }
+
+    if (sticky && !focused.floating) {
+      return result(false, "Sticky requires a floating window");
+    }
+
+    focused.sticky = sticky;
+    context.adapter.setSticky?.(focused.window, sticky);
+    return result(true);
+  },
+};
+
 export const fullscreenHandler: CommandHandler = {
   action: "fullscreen",
   execute: (command, context) => {

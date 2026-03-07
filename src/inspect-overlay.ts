@@ -149,6 +149,7 @@ export class InspectOverlay {
     add(`  App ID:     ${container.appId}`);
     add(`  Type:       ${windowTypeName(container.window_type)} (${container.window_type})`);
     add(`  Floating:   ${container.floating ? "yes" : "no"}`);
+    add(`  Sticky:     ${container.sticky ? "yes" : "no"}`);
     add(`  Fullscreen: ${container.fullscreen ? "yes" : "no"}`);
 
     spacer();

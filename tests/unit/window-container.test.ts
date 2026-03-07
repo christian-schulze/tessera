@@ -12,6 +12,7 @@ describe("WindowContainer", () => {
     expect(window.appId).toBe("app.test");
     expect(window.title).toBe("Title");
     expect(window.floating).toBe(false);
+    expect(window.sticky).toBe(false);
     expect(window.fullscreen).toBe(false);
   });
 
@@ -23,6 +24,7 @@ describe("WindowContainer", () => {
     window.focused = true;
     window.proportion = 2;
     window.floating = true;
+    window.sticky = true;
     window.fullscreen = true;
 
     const json = window.toJSON();
@@ -42,6 +44,7 @@ describe("WindowContainer", () => {
       title: "Title",
       window_type: 0,
       floating: true,
+      sticky: true,
       fullscreen: true,
     });
   });

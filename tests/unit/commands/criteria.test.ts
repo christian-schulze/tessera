@@ -43,4 +43,25 @@ describe("Command criteria", () => {
 
     expect(matches).toBeTrue();
   });
+
+  it("matches sticky on sticky windows", () => {
+    const window = new WindowContainer("w-1", {}, 1, "firefox", "Docs");
+    window.sticky = true;
+
+    const matches = matchesCriteria(window, [
+      { key: "sticky", operator: "=", value: "true" },
+    ]);
+
+    expect(matches).toBeTrue();
+  });
+
+  it("matches non_sticky on non-sticky windows", () => {
+    const window = new WindowContainer("w-1", {}, 1, "firefox", "Docs");
+
+    const matches = matchesCriteria(window, [
+      { key: "non_sticky", operator: "exists", value: null },
+    ]);
+
+    expect(matches).toBeTrue();
+  });
 });

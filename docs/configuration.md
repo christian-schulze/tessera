@@ -103,7 +103,7 @@ module.exports = {
   rules: [
     // Move all Firefox windows to workspace 2, but only normal windows (not dialogs)
     { match: { app_id: "firefox", window_type: "0" }, commands: ["move container to workspace 2"] },
-    { match: { title: "Picture-in-Picture" }, commands: ["floating enable"] },
+    { match: { title: "Picture-in-Picture" }, commands: ["floating enable", "sticky enable"] },
     { match: { app_id: "org.gnome.Nautilus" }, commands: ["floating enable"] },
   ],
 
@@ -135,6 +135,7 @@ When `modes` is omitted or `null`, these defaults are used:
 | `Super+E` | Toggle split layout |
 | `Super+Shift+E` | Toggle alternating mode on focused split |
 | `Super+F` | Toggle fullscreen |
+| `Super+Shift+S` | Toggle sticky (floating windows only) |
 | `Super+I` | Show/hide window inspect overlay |
 | `Super+Shift+Q` | Close focused window |
 | `Super+Shift+R` | Reload config |
@@ -261,6 +262,7 @@ Any Tessera command can be used in rules:
 - `move left/right/up/down` — re-parent window into the adjacent container
 - `swap left/right/up/down` — swap window with the nearest window in that direction
 - `fullscreen enable` — make window fullscreen
+- `sticky on|off|toggle` (`enable|disable` aliases) — control sticky state (requires floating)
 - `resize set W H` — set window size
 - `retile` — recompute and reapply layout to all windows
 - `alternating on` / `alternating off` / `alternating toggle` — control alternating mode on the focused split

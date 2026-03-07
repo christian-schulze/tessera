@@ -5,6 +5,7 @@ export interface WindowAdapter {
   moveResize: (window: unknown, rect: Rect) => void;
   setFullscreen: (window: unknown, fullscreen: boolean) => void;
   setFloating: (window: unknown, floating: boolean) => void;
+  setSticky?: (window: unknown, sticky: boolean) => void;
   close: (window: unknown) => void;
   exec: (command: string) => void;
   execCapture?: (command: string) => Promise<{ stdout: string; stderr: string; exitCode: number }>;

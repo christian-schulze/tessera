@@ -16,6 +16,7 @@ import {
   floatingHandler,
   fullscreenHandler,
   markHandler,
+  stickyHandler,
   unmarkHandler,
   workspaceHandler,
 } from "./handlers/workspace.js";
@@ -47,6 +48,7 @@ export const registerDefaultHandlers = (engine: CommandEngine): void => {
   engine.register(markHandler);
   engine.register(unmarkHandler);
   engine.register(floatingHandler);
+  engine.register(stickyHandler);
   engine.register(fullscreenHandler);
   engine.register(execHandler);
   engine.register(execCaptureHandler);

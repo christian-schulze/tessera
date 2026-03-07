@@ -278,6 +278,14 @@ export default class TesseraExtension extends Extension {
             metaWindow.unmake_above();
           }
         },
+        setSticky: (window: unknown, sticky: boolean) => {
+          const metaWindow = window as Meta.Window;
+          if (sticky) {
+            metaWindow.stick();
+          } else {
+            metaWindow.unstick();
+          }
+        },
         close: (window: unknown) =>
           (window as Meta.Window).delete(global.get_current_time()),
         exec: (command: string) => GLib.spawn_command_line_async(command),

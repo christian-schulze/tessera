@@ -35,6 +35,7 @@ export const buildDefaultBindingModes = (): BindingMode[] => [
       { keys: ["<Super>e"], command: "layout toggle split" },
       { keys: ["<Super><Shift>e"], command: "alternating toggle" },
       { keys: ["<Super>f"], command: "fullscreen toggle" },
+      { keys: ["<Super><Shift>s"], command: "sticky toggle" },
       { keys: ["<Super>i"], command: "inspect" },
       { keys: ["<Super><Shift>q"], command: "kill" },
       { keys: ["<Super><Shift>r"], command: "reload" },
