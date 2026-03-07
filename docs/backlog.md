@@ -12,6 +12,10 @@ This document tracks future features and enhancements. Add new ideas here as the
 
 - Fix Looking Glass return value for non-IPC `globalThis.__tessera.execute` in nested sessions (currently returns `undefined`).
 
+## Sticky Floating Windows
+
+- When a floating window is marked sticky, remember its origin workspace and restore it there when sticky is turned off.
+
 ## Visual Focus
 
 - ~~Render a focused-window border using GNOME Shell actor styling (frame-only) with configurable color and width.~~ **Done** — `focusedBorder: { color, width }` in config; implemented as 4 inset `St.Widget` bars on `global.window_group` (`src/focus-border.ts`).
