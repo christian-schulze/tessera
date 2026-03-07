@@ -80,6 +80,16 @@ export class InspectOverlay {
   private readonly panel: StWidget;
   private readonly config: InspectOverlayConfig;
   private isVisible = false;
+  private inspectedWindowId: number | null = null;
+  private inspectedContainer: WindowContainer | null = null;
+  private windowActor: ClutterActor | null = null;
+  private allocationSignalId: number | null = null;
+  private inspectedWindow:
+    | {
+        disconnect?: (id: number) => void;
+      }
+    | null = null;
+  private unmanagedSignalId: number | null = null;
 
   constructor(config: InspectOverlayConfig) {
     this.config = config;
@@ -99,21 +109,41 @@ export class InspectOverlay {
 
   show(container: WindowContainer): void {
     this.buildContent(container);
+    this.inspectedWindowId = container.windowId;
+    this.inspectedContainer = container;
+    this.connectWindowActor(container);
 
     const group = global.window_group as ClutterActor;
     group.set_child_above_sibling(this.panel, null);
-
-    const meta = container.window as { get_frame_rect?: () => { x: number; y: number } };
-    const rect = meta.get_frame_rect?.() ?? container.rect;
-    this.panel.set_position(rect.x + 16, rect.y + 16);
+    this.positionNearWindow(container);
 
     this.panel.show();
     this.isVisible = true;
   }
 
+  refresh(container: WindowContainer): void {
+    if (!this.isVisible) {
+      return;
+    }
+
+    if (this.inspectedWindowId !== container.windowId) {
+      return;
+    }
+
+    this.inspectedContainer = container;
+    this.buildContent(container);
+    const group = global.window_group as ClutterActor;
+    group.set_child_above_sibling(this.panel, null);
+    this.positionNearWindow(container);
+    this.panel.show();
+  }
+
   hide(): void {
     this.panel.hide();
     this.isVisible = false;
+    this.inspectedWindowId = null;
+    this.inspectedContainer = null;
+    this.disconnectWindowActor();
   }
 
   toggle(container: WindowContainer): void {
@@ -125,7 +155,62 @@ export class InspectOverlay {
   }
 
   destroy(): void {
+    this.disconnectWindowActor();
     this.panel.destroy();
+  }
+
+  private connectWindowActor(container: WindowContainer): void {
+    this.disconnectWindowActor();
+
+    const window = container.window as {
+      connect?: (signal: string, callback: () => void) => number;
+      disconnect?: (id: number) => void;
+      get_compositor_private?: () => ClutterActor | null;
+    };
+
+    if (typeof window.connect === "function" && typeof window.disconnect === "function") {
+      this.inspectedWindow = window;
+      this.unmanagedSignalId = window.connect("unmanaged", () => {
+        this.hide();
+      });
+    }
+
+    const actor = window.get_compositor_private?.() ?? null;
+    if (!actor) {
+      return;
+    }
+
+    this.windowActor = actor;
+    this.allocationSignalId = actor.connect("notify::allocation", () => {
+      if (!this.isVisible || !this.inspectedContainer) {
+        return;
+      }
+      this.refresh(this.inspectedContainer);
+    });
+  }
+
+  private disconnectWindowActor(): void {
+    if (this.windowActor && this.allocationSignalId !== null) {
+      this.windowActor.disconnect(this.allocationSignalId);
+    }
+    this.windowActor = null;
+    this.allocationSignalId = null;
+
+    if (
+      this.inspectedWindow &&
+      typeof this.inspectedWindow.disconnect === "function" &&
+      this.unmanagedSignalId !== null
+    ) {
+      this.inspectedWindow.disconnect(this.unmanagedSignalId);
+    }
+    this.inspectedWindow = null;
+    this.unmanagedSignalId = null;
+  }
+
+  private positionNearWindow(container: WindowContainer): void {
+    const meta = container.window as { get_frame_rect?: () => { x: number; y: number } };
+    const rect = meta.get_frame_rect?.() ?? container.rect;
+    this.panel.set_position(rect.x + 16, rect.y + 16);
   }
 
   private buildContent(container: WindowContainer): void {
@@ -156,7 +241,10 @@ export class InspectOverlay {
 
     // Geometry section
     add("Geometry", true);
-    const r = container.rect;
+    const meta = container.window as {
+      get_frame_rect?: () => { x: number; y: number; width: number; height: number };
+    };
+    const r = meta.get_frame_rect?.() ?? container.rect;
     add(`  Rect:       ${r.x}, ${r.y}  ${r.width}×${r.height}`);
     add(`  Proportion: ${container.proportion.toFixed(2)}`);
 

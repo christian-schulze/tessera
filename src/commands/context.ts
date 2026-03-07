@@ -2,6 +2,7 @@ import type { RootContainer } from "../tree/root-container.js";
 import type { Container } from "../tree/container.js";
 import type { WindowAdapter } from "./adapter.js";
 import type { TesseraConfig } from "../config.js";
+import type { WindowContainer } from "../tree/window-container.js";
 
 export interface CommandContext {
   root: RootContainer;
@@ -14,4 +15,5 @@ export interface CommandContext {
   dumpDebug?: () => void;
   dumpTree?: () => void;
   toggleInspect?: () => void;
+  refreshInspect?: (container: WindowContainer) => void;
 }

@@ -4,6 +4,7 @@ import type { CommandEngine } from "./engine.js";
 import type { WindowAdapter } from "./adapter.js";
 import type { CommandResult } from "./types.js";
 import type { TesseraConfig } from "../config.js";
+import type { WindowContainer } from "../tree/window-container.js";
 import { parseCommandString } from "./parser.js";
 import { findFocusedContainer } from "./index.js";
 
@@ -20,6 +21,7 @@ export interface CommandServiceDeps {
   dumpDebug?: () => void;
   dumpTree?: () => void;
   toggleInspect?: () => void;
+  refreshInspect?: (container: WindowContainer) => void;
 }
 
 export interface CommandService {
@@ -49,6 +51,7 @@ export function buildCommandService(deps: CommandServiceDeps): CommandService {
       dumpDebug: deps.dumpDebug,
       dumpTree: deps.dumpTree,
       toggleInspect: deps.toggleInspect,
+      refreshInspect: deps.refreshInspect,
     });
   };
 

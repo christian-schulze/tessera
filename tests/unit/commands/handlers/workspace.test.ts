@@ -135,6 +135,68 @@ describe("Workspace and window state handlers", () => {
     expect(workspaceB.lastFocusedWindowId).toBe(11);
   });
 
+  it("falls back to remembered floating window when workspace has no tiled windows", () => {
+    const root = new RootContainer(0);
+    const output = new OutputContainer(1, 0, { x: 0, y: 0, width: 100, height: 100 });
+    const workspaceA = new WorkspaceContainer(2, "dev", 1, true);
+    const workspaceB = new WorkspaceContainer(3, "web", 2, false);
+    const windowB = {};
+    const windowContainerB = new WindowContainer(5, windowB, 22, "app", "B");
+    windowContainerB.floating = true;
+
+    root.addOutput(output);
+    output.addChild(workspaceA);
+    output.addChild(workspaceB);
+    workspaceB.addChild(windowContainerB);
+    workspaceB.lastFocusedWindowId = 22;
+
+    const adapter = makeAdapter();
+
+    const result = workspaceHandler.execute(makeCommand("workspace", ["web"]), {
+      root,
+      focused: workspaceA,
+      adapter,
+      config: { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const },
+    });
+
+    expect(result.success).toBeTrue();
+    expect(adapter.activated).toEqual([windowB]);
+    expect(windowContainerB.focused).toBeTrue();
+  });
+
+  it("falls back to first floating window when no remembered focus exists and workspace has no tiled windows", () => {
+    const root = new RootContainer(0);
+    const output = new OutputContainer(1, 0, { x: 0, y: 0, width: 100, height: 100 });
+    const workspaceA = new WorkspaceContainer(2, "dev", 1, true);
+    const workspaceB = new WorkspaceContainer(3, "web", 2, false);
+    const windowB = {};
+    const windowC = {};
+    const windowContainerB = new WindowContainer(5, windowB, 22, "app", "B");
+    const windowContainerC = new WindowContainer(6, windowC, 23, "app", "C");
+    windowContainerB.floating = true;
+    windowContainerC.floating = true;
+
+    root.addOutput(output);
+    output.addChild(workspaceA);
+    output.addChild(workspaceB);
+    workspaceB.addChild(windowContainerB);
+    workspaceB.addChild(windowContainerC);
+
+    const adapter = makeAdapter();
+
+    const result = workspaceHandler.execute(makeCommand("workspace", ["web"]), {
+      root,
+      focused: workspaceA,
+      adapter,
+      config: { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const },
+    });
+
+    expect(result.success).toBeTrue();
+    expect(adapter.activated).toEqual([windowB]);
+    expect(windowContainerB.focused).toBeTrue();
+    expect(workspaceB.lastFocusedWindowId).toBe(22);
+  });
+
   it("restores remembered focus even if switch updates active window", () => {
     const root = new RootContainer(0);
     const output = new OutputContainer(1, 0, { x: 0, y: 0, width: 100, height: 100 });
@@ -215,6 +277,7 @@ describe("Workspace and window state handlers", () => {
     expect(focused.floating).toBeTrue();
     expect(workspace.getFloatingWindows()).toEqual([focused]);
     expect(adapter.floating).toEqual([{ window, value: true }]);
+    expect(adapter.activated).toEqual([window]);
     expect(adapter.moveResize).not.toHaveBeenCalled();
   });
 
@@ -239,6 +302,7 @@ describe("Workspace and window state handlers", () => {
     expect(focused.floating).toBeFalse();
     expect(workspace.getFloatingWindows()).toEqual([]);
     expect(adapter.floating).toEqual([{ window, value: false }]);
+    expect(adapter.activated).toEqual([window]);
     expect(adapter.moveResize).toHaveBeenCalled();
   });
 
@@ -257,6 +321,7 @@ describe("Workspace and window state handlers", () => {
     expect(result.success).toBeTrue();
     expect(focused.fullscreen).toBeTrue();
     expect(adapter.fullscreen).toEqual([{ window, value: true }]);
+    expect(adapter.activated).toEqual([window]);
   });
 
   it("toggles sticky on focused floating windows", () => {
@@ -275,6 +340,7 @@ describe("Workspace and window state handlers", () => {
     expect(result.success).toBeTrue();
     expect(focused.sticky).toBeTrue();
     expect(adapter.sticky).toEqual([{ window, value: true }]);
+    expect(adapter.activated).toEqual([window]);
   });
 
   it("rejects sticky enable on non-floating windows", () => {
@@ -311,5 +377,57 @@ describe("Workspace and window state handlers", () => {
     expect(result.success).toBeTrue();
     expect(focused.sticky).toBeFalse();
     expect(adapter.sticky).toEqual([{ window, value: false }]);
+    expect(adapter.activated).toEqual([window]);
+  });
+
+  it("refreshes inspect overlay after floating/sticky/fullscreen changes", () => {
+    const window = {};
+    const focused = new WindowContainer(1, window, 1, "app", "title");
+    focused.floating = true;
+    const adapter = makeAdapter();
+    const refreshInspect = jasmine.createSpy("refreshInspect");
+
+    floatingHandler.execute(makeCommand("floating", ["on"]), {
+      root: focused as any,
+      focused,
+      adapter,
+      config: { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const },
+      refreshInspect,
+    });
+    stickyHandler.execute(makeCommand("sticky", ["on"]), {
+      root: focused as any,
+      focused,
+      adapter,
+      config: { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const },
+      refreshInspect,
+    });
+    fullscreenHandler.execute(makeCommand("fullscreen", ["enable"]), {
+      root: focused as any,
+      focused,
+      adapter,
+      config: { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const },
+      refreshInspect,
+    });
+
+    expect(refreshInspect).toHaveBeenCalledTimes(3);
+    expect(refreshInspect).toHaveBeenCalledWith(focused);
+  });
+
+  it("does not refresh inspect overlay when sticky command is rejected", () => {
+    const window = {};
+    const focused = new WindowContainer(1, window, 1, "app", "title");
+    const adapter = makeAdapter();
+    const refreshInspect = jasmine.createSpy("refreshInspect");
+
+    const result = stickyHandler.execute(makeCommand("sticky", ["enable"]), {
+      root: focused as any,
+      focused,
+      adapter,
+      config: { minTileWidth: 300, minTileHeight: 240, alternatingMode: "focused" as const },
+      refreshInspect,
+    });
+
+    expect(result.success).toBeFalse();
+    expect(refreshInspect).not.toHaveBeenCalled();
   });
 });

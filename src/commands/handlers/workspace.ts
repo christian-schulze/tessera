@@ -136,7 +136,7 @@ export const workspaceHandler: CommandHandler = {
     context.focused = workspace;
 
     const allWindows = collectWindows(workspace);
-    const windows = allWindows.filter((window) => !window.floating);
+    const tiledWindows = allWindows.filter((window) => !window.floating);
     const lastFocused = rememberedFocusId ?? workspace.lastFocusedWindowId;
     const rememberedWindow = lastFocused
       ? allWindows.find((window) => window.windowId === lastFocused)
@@ -145,7 +145,7 @@ export const workspaceHandler: CommandHandler = {
       ? rememberedWindow
       : null;
     if (!focusTarget) {
-      focusTarget = windows[0] ?? null;
+      focusTarget = tiledWindows[0] ?? rememberedWindow ?? allWindows[0] ?? null;
       if (focusTarget && !rememberedWindow) {
         workspace.lastFocusedWindowId = focusTarget.windowId;
       }
@@ -222,17 +222,19 @@ export const floatingHandler: CommandHandler = {
 
     focused.floating = floating;
     context.adapter.setFloating(focused.window, floating);
+    context.refreshInspect?.(focused);
 
     const workspace = findWorkspaceForContainer(focused);
-      if (workspace) {
-        workspace.removeFloatingWindow(focused);
-        if (floating) {
-          workspace.addFloatingWindow(focused);
-        }
-        reflow(workspace, context.config.gaps);
-        applyLayout(workspace, context.adapter);
+    if (workspace) {
+      workspace.removeFloatingWindow(focused);
+      if (floating) {
+        workspace.addFloatingWindow(focused);
       }
+      reflow(workspace, context.config.gaps);
+      applyLayout(workspace, context.adapter);
+    }
 
+    context.adapter.activate(focused.window);
     return result(true);
   },
 };
@@ -261,6 +263,8 @@ export const stickyHandler: CommandHandler = {
 
     focused.sticky = sticky;
     context.adapter.setSticky?.(focused.window, sticky);
+    context.refreshInspect?.(focused);
+    context.adapter.activate(focused.window);
     return result(true);
   },
 };
@@ -285,6 +289,8 @@ export const fullscreenHandler: CommandHandler = {
 
     focused.fullscreen = fullscreen;
     context.adapter.setFullscreen(focused.window, fullscreen);
+    context.refreshInspect?.(focused);
+    context.adapter.activate(focused.window);
     return result(true);
   },
 };

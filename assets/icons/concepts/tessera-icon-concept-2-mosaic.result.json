@@ -1,0 +1,45 @@
+{
+  "created_at": "2026-03-06T12:05:41.57279Z",
+  "error": null,
+  "id": "6dhrkh3nzenypjbfdc4yye043y",
+  "output": {
+    "description": "",
+    "images": [
+      "https://cloud.inference.sh/app/files/u/05t1e97ed6p22v7bcatce34beg/01kk1gqqrwtdzy5nz15yjendpq.png"
+    ],
+    "output_meta": {
+      "inputs": [
+        {
+          "extra": null,
+          "tokens": 87,
+          "type": "text"
+        }
+      ],
+      "outputs": [
+        {
+          "extra": null,
+          "tokens": 330,
+          "type": "text"
+        },
+        {
+          "extra": null,
+          "tokens": 1120,
+          "type": "text"
+        },
+        {
+          "count": 1,
+          "extra": null,
+          "height": 1024,
+          "resolution_mp": 0,
+          "steps": 0,
+          "type": "image",
+          "width": 1024
+        }
+      ]
+    }
+  },
+  "session_id": null,
+  "status": 10,
+  "status_text": "completed",
+  "updated_at": "2026-03-06T12:05:41.867326Z"
+}

@@ -110,7 +110,6 @@ export default class TesseraExtension extends Extension {
         onFocusChanged: () => {
           const focused = global.display.get_focus_window() as Meta.Window | null;
           this.focusBorder?.update(focused);
-          this.inspectOverlay?.hide();
         },
         shouldSkipWindow: (window) => {
           const metaWindow = window as Meta.Window;
@@ -375,6 +374,9 @@ export default class TesseraExtension extends Extension {
           }
         },
         onAfterExecute: () => {},
+        refreshInspect: (container: WindowContainer) => {
+          this.inspectOverlay?.refresh(container);
+        },
       };
       const commandService = buildCommandService(commandServiceDeps);
       this.commandService = commandService;
