@@ -30,6 +30,17 @@ const barsFor = (top: StWidget, bottom: StWidget, left: StWidget, right: StWidge
   right as unknown as ClutterActor,
 ];
 
+const reportError = (error: unknown, message: string): void => {
+  const logger = (globalThis as {
+    logError?: (error: Error, message?: string) => void;
+  }).logError;
+  if (!logger) {
+    return;
+  }
+
+  logger(error instanceof Error ? error : new Error(String(error)), message);
+};
+
 export const attachBorderActors = (
   parent: ClutterParent,
   bars: ClutterActor[]
@@ -42,8 +53,19 @@ export const attachBorderActors = (
       currentParent.remove_child(bar);
     }
 
-    parent.add_child(bar);
-    parent.set_child_above_sibling(bar, null);
+    if (currentParent !== parent) {
+      parent.add_child(bar);
+    }
+  }
+};
+
+export const raiseBorderActorsAboveSibling = (
+  parent: ClutterParent,
+  bars: ClutterActor[],
+  sibling: ClutterActor | null
+): void => {
+  for (const bar of bars) {
+    parent.set_child_above_sibling(bar, sibling);
   }
 };
 
@@ -55,6 +77,7 @@ export class FocusBorder {
   private readonly right: StWidget;
   private windowActor: ClutterActor | null = null;
   private allocationSignalId: number | null = null;
+  private destroySignalId: number | null = null;
   private focusedWindow: Meta.Window | null = null;
 
   constructor(color: string, width: number) {
@@ -63,6 +86,9 @@ export class FocusBorder {
     this.bottom = makeBar(color);
     this.left = makeBar(color);
     this.right = makeBar(color);
+
+    const group = global.window_group as unknown as ClutterParent;
+    attachBorderActors(group, barsFor(this.top, this.bottom, this.left, this.right));
   }
 
   update(metaWindow: Meta.Window | null): void {
@@ -86,8 +112,29 @@ export class FocusBorder {
         this.reposition(this.focusedWindow);
       }
     });
+    this.destroySignalId = actor.connect("destroy", () => {
+      if (this.windowActor !== actor) {
+        return;
+      }
 
-    attachBorderActors(actor as unknown as ClutterParent, barsFor(this.top, this.bottom, this.left, this.right));
+      this.windowActor = null;
+      this.allocationSignalId = null;
+      this.destroySignalId = null;
+      this.hide();
+    });
+
+    const group = global.window_group as unknown as ClutterParent;
+    const actorParent = (actor as unknown as {
+      get_parent?: () => ClutterParent | null;
+    }).get_parent?.() ?? null;
+
+    // Keep the bars under a stable shell-owned parent, but stack them just
+    // above the focused window actor instead of above the entire window group.
+    raiseBorderActorsAboveSibling(
+      group,
+      barsFor(this.top, this.bottom, this.left, this.right),
+      actorParent === group ? actor : null
+    );
     this.reposition(metaWindow);
     this.show();
   }
@@ -103,26 +150,19 @@ export class FocusBorder {
 
   private reposition(metaWindow: Meta.Window): void {
     const frame = metaWindow.get_frame_rect();
-    const buffer = metaWindow.get_buffer_rect();
     const w = this.width;
     const innerHeight = Math.max(0, frame.height - 2 * w);
 
-    // Bars are attached to the compositor actor (buffer space), while frame
-    // rect coordinates are in stage space. Compensate by offsetting by
-    // frame-vs-buffer origin delta.
-    const x = frame.x - buffer.x;
-    const y = frame.y - buffer.y;
-
-    this.top.set_position(x, y);
+    this.top.set_position(frame.x, frame.y);
     this.top.set_size(frame.width, w);
 
-    this.bottom.set_position(x, y + frame.height - w);
+    this.bottom.set_position(frame.x, frame.y + frame.height - w);
     this.bottom.set_size(frame.width, w);
 
-    this.left.set_position(x, y + w);
+    this.left.set_position(frame.x, frame.y + w);
     this.left.set_size(w, innerHeight);
 
-    this.right.set_position(x + frame.width - w, y + w);
+    this.right.set_position(frame.x + frame.width - w, frame.y + w);
     this.right.set_size(w, innerHeight);
   }
 
@@ -140,21 +180,33 @@ export class FocusBorder {
     this.right.hide();
   }
 
-  private detachBars(): void {
-    for (const bar of barsFor(this.top, this.bottom, this.left, this.right)) {
-      const parent = (bar as unknown as {
-        get_parent?: () => ClutterParent | null;
-      }).get_parent?.() ?? null;
-      parent?.remove_child(bar);
-    }
-  }
-
   private disconnectWindowActor(): void {
-    if (this.windowActor !== null && this.allocationSignalId !== null) {
-      this.windowActor.disconnect(this.allocationSignalId);
-    }
+    const actor = this.windowActor;
+    const allocationSignalId = this.allocationSignalId;
+    const destroySignalId = this.destroySignalId;
+
     this.windowActor = null;
     this.allocationSignalId = null;
-    this.detachBars();
+    this.destroySignalId = null;
+
+    if (!actor) {
+      return;
+    }
+
+    if (allocationSignalId !== null) {
+      try {
+        actor.disconnect(allocationSignalId);
+      } catch (error) {
+        reportError(error, "[tessera] focus border failed to disconnect allocation signal");
+      }
+    }
+
+    if (destroySignalId !== null) {
+      try {
+        actor.disconnect(destroySignalId);
+      } catch (error) {
+        reportError(error, "[tessera] focus border failed to disconnect destroy signal");
+      }
+    }
   }
 }

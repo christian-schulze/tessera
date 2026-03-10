@@ -27,6 +27,7 @@ import { buildMonitorInfos } from "./monitors.js";
 import { buildDebugPayload } from "./ipc/debug.js";
 import { DEFAULT_CONFIG, applyConfig, loadConfig, type TesseraConfig } from "./config.js";
 import { FocusBorder } from "./focus-border.js";
+import { scheduleFocusBorderSync } from "./focus-border-sync.js";
 import { InspectOverlay } from "./inspect-overlay.js";
 import { BindingHelpOverlay } from "./binding-help-overlay.js";
 import { WindowContainer } from "./tree/window-container.js";
@@ -83,6 +84,25 @@ export default class TesseraExtension extends Extension {
     this.inspectOverlay = new InspectOverlay(this.config.inspectOverlay);
   }
 
+  private syncFocusBorder(): void {
+    const focused = global.display.get_focus_window() as Meta.Window | null;
+    this.focusBorder?.update(focused);
+  }
+
+  private scheduleFocusBorderSync(): void {
+    scheduleFocusBorderSync(
+      () => {
+        this.syncFocusBorder();
+      },
+      (delayMs, callback) => {
+        GLib.timeout_add(GLib.PRIORITY_DEFAULT, delayMs, () => {
+          callback();
+          return GLib.SOURCE_REMOVE;
+        });
+      }
+    );
+  }
+
   private activeBindingModeSnapshot(): { name: string; bindings: Binding[] } | null {
     const mode = this.bindingManager?.getActiveModeDefinition();
     if (!mode) {
@@ -117,10 +137,11 @@ export default class TesseraExtension extends Extension {
         executeForTarget: (command, target) => {
           this.commandService?.executeForTarget(command, target);
         },
-        onLayoutApplied: () => {},
+        onLayoutApplied: () => {
+          this.scheduleFocusBorderSync();
+        },
         onFocusChanged: () => {
-          const focused = global.display.get_focus_window() as Meta.Window | null;
-          this.focusBorder?.update(focused);
+          this.syncFocusBorder();
         },
         shouldSkipWindow: (window) => {
           const metaWindow = window as Meta.Window;
@@ -386,7 +407,9 @@ export default class TesseraExtension extends Extension {
             Main.notify("Tessera", "Configuration reloaded");
           }
         },
-        onAfterExecute: () => {},
+        onAfterExecute: () => {
+          this.scheduleFocusBorderSync();
+        },
         refreshInspect: (container: WindowContainer) => {
           this.inspectOverlay?.refresh(container);
         },
