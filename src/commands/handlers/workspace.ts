@@ -1,6 +1,7 @@
 import type { CommandHandler, CommandResult } from "../types.js";
 import type { CommandContext } from "../context.js";
-import { Container, ContainerType } from "../../tree/container.js";
+import { ContainerType } from "../../tree/container.js";
+import { collectWindows, findWorkspaceForContainer } from "./core.js";
 import { WindowContainer } from "../../tree/window-container.js";
 import { WorkspaceContainer } from "../../tree/workspace-container.js";
 import { reflow } from "../../tree/reflow.js";
@@ -39,21 +40,6 @@ const findWorkspaceByName = (
   return null;
 };
 
-const collectWindows = (container: Container): WindowContainer[] => {
-  const windows: WindowContainer[] = [];
-  const walk = (node: Container): void => {
-    if (node instanceof WindowContainer) {
-      windows.push(node);
-      return;
-    }
-    for (const child of node.children) {
-      walk(child);
-    }
-  };
-  walk(container);
-  return windows;
-};
-
 const scheduleFocusRestore = (action: () => void): void => {
   if ((globalThis as { jasmine?: unknown }).jasmine) {
     action();
@@ -83,20 +69,6 @@ const scheduleFocusRestore = (action: () => void): void => {
   action();
 };
 
-
-const findWorkspaceForContainer = (
-  container: Container
-): WorkspaceContainer | null => {
-  let current: Container | null = container;
-  while (current) {
-    if (current instanceof WorkspaceContainer) {
-      return current;
-    }
-    current = current.parent;
-  }
-
-  return null;
-};
 
 export const workspaceHandler: CommandHandler = {
   action: "workspace",

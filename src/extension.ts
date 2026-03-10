@@ -67,10 +67,6 @@ export default class TesseraExtension extends Extension {
   private bindingHelpOverlay: BindingHelpOverlay | null = null;
   private statusIndicator: TesseraStatusIndicator | null = null;
 
-  private logToFile(message: string): void {
-    appendLog(message);
-  }
-
   private applyFocusBorderConfig(): void {
     this.focusBorder?.destroy();
     this.focusBorder = null;
@@ -255,7 +251,7 @@ export default class TesseraExtension extends Extension {
 
   enable(): void {
     try {
-      this.logToFile("enable start");
+      appendLog("enable start");
       this.config = loadConfig();
       this.rebuildTree("initial");
       this.applyFocusBorderConfig();
@@ -562,11 +558,11 @@ export default class TesseraExtension extends Extension {
       if (ipcEnv !== "0") {
         this.ipcServer = new IpcServer();
         this.ipcServer.start(tesseraService);
-        this.logToFile(
+        appendLog(
           `[tessera ipc] enabled env=${ipcEnv ?? "<unset>"} socket=${this.ipcServer.getSocketPath() ?? "<none>"}`
         );
       } else {
-        this.logToFile("[tessera ipc] disabled via TESSERA_IPC=0");
+        appendLog("[tessera ipc] disabled via TESSERA_IPC=0");
       }
 
       (globalThis as unknown as { __tessera?: TesseraGlobal }).__tessera = {
@@ -580,7 +576,7 @@ export default class TesseraExtension extends Extension {
         try {
           GLib.spawn_command_line_async(cmd);
         } catch (execError) {
-          this.logToFile(`startup exec failed: ${cmd}: ${execError}`);
+          appendLog(`startup exec failed: ${cmd}: ${execError}`);
         }
       }
     } catch (error) {
@@ -588,7 +584,7 @@ export default class TesseraExtension extends Extension {
         error instanceof Error
           ? error.stack ?? error.message
           : String(error);
-      this.logToFile(`enable failed: ${errorText}`);
+      appendLog(`enable failed: ${errorText}`);
       logError(error as Error, "[tessera] enable failed");
       throw error;
     }

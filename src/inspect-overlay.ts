@@ -166,16 +166,10 @@ export class InspectOverlay {
       return;
     }
 
-    this.buildContent(container);
     this.inspectedWindowId = container.windowId;
     this.inspectedContainer = container;
     this.connectWindowActor(container);
-
-    const group = global.window_group as ClutterActor;
-    group.set_child_above_sibling(this.panel, null);
-    this.positionNearWindow(container);
-
-    this.panel.show();
+    this.renderPanel(container);
     this.isVisible = true;
   }
 
@@ -194,11 +188,7 @@ export class InspectOverlay {
     }
 
     this.inspectedContainer = container;
-    this.buildContent(container);
-    const group = global.window_group as ClutterActor;
-    group.set_child_above_sibling(this.panel, null);
-    this.positionNearWindow(container);
-    this.panel.show();
+    this.renderPanel(container);
   }
 
   hide(): void {
@@ -277,6 +267,14 @@ export class InspectOverlay {
     }
     this.inspectedWindow = null;
     this.unmanagedSignalId = null;
+  }
+
+  private renderPanel(container: WindowContainer): void {
+    this.buildContent(container);
+    const group = global.window_group as ClutterActor;
+    group.set_child_above_sibling(this.panel, null);
+    this.positionNearWindow(container);
+    this.panel.show();
   }
 
   private positionNearWindow(container: WindowContainer): void {

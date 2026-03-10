@@ -50,7 +50,7 @@ const findWindowById = (
   return null;
 };
 
-const findWorkspaceForContainer = (container: Container): WorkspaceContainer | null => {
+export const findWorkspaceForContainer = (container: Container): WorkspaceContainer | null => {
   let current: Container | null = container;
   while (current) {
     if (current instanceof WorkspaceContainer) {
@@ -105,7 +105,7 @@ const findSplitTarget = (workspace: WorkspaceContainer, defaultAlternating = tru
   return split;
 };
 
-const collectWindows = (container: Container): WindowContainer[] => {
+export const collectWindows = (container: Container): WindowContainer[] => {
   const windows: WindowContainer[] = [];
 
   const walk = (node: Container): void => {
@@ -222,9 +222,8 @@ const findDirectionalWindow = (
   if (preferred.length === 0) {
     return null;
   }
-  const ranked = preferred;
 
-  return ranked.reduce((best, candidate) => {
+  return preferred.reduce((best, candidate) => {
     const primary = primaryDistance(candidate);
     const bestPrimary = primaryDistance(best);
     if (primary !== bestPrimary) {
