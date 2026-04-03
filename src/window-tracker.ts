@@ -56,6 +56,7 @@ export class WindowTracker {
   private onLayoutApplied: (() => void) | null;
   private onFocusChanged: (() => void) | null;
   private shouldSkipWindow: ((window: unknown) => boolean) | null;
+  private shouldUntrackWindowDeferred: ((window: unknown, container: WindowContainer) => (() => void) | false) | null;
 
   constructor(
     root: RootContainer,
@@ -65,6 +66,7 @@ export class WindowTracker {
       onLayoutApplied?: () => void;
       onFocusChanged?: () => void;
       shouldSkipWindow?: (window: unknown) => boolean;
+      shouldUntrackWindowDeferred?: (window: unknown, container: WindowContainer) => (() => void) | false;
     }
   ) {
     this.root = root;
@@ -73,6 +75,7 @@ export class WindowTracker {
     this.onLayoutApplied = options?.onLayoutApplied ?? null;
     this.onFocusChanged = options?.onFocusChanged ?? null;
     this.shouldSkipWindow = options?.shouldSkipWindow ?? null;
+    this.shouldUntrackWindowDeferred = options?.shouldUntrackWindowDeferred ?? null;
     this.windowMap = new Map();
     this.windowSignals = new Map();
     this.trackerSignals = new Map();
@@ -321,6 +324,12 @@ export class WindowTracker {
         // Some windows (e.g. Chrome's Live Caption) have an empty title at
         // tracking time and only set it shortly after mapping.
         if (!prevTitle && container.title) {
+          const cleanup = this.shouldUntrackWindowDeferred?.(window, container);
+          if (cleanup !== undefined && cleanup !== false) {
+            this.handleWindowRemoved(windowId);
+            cleanup();
+            return;
+          }
           const { rules } = this.getConfig();
           appendLog(`rules (title-deferred): title="${container.title}" count=${rules.length} hasExecutor=${!!this.executeForTarget}`);
           if (rules.length > 0 && this.executeForTarget) {
@@ -379,6 +388,12 @@ export class WindowTracker {
           // Re-evaluate rules now that the real appId is known.
           // Rules couldn't match during trackWindow() because the appId
           // was still a placeholder ("window:N") at that time.
+          const cleanup = this.shouldUntrackWindowDeferred?.(window, container);
+          if (cleanup !== undefined && cleanup !== false) {
+            this.handleWindowRemoved(windowId);
+            cleanup();
+            return;
+          }
           const { rules } = this.getConfig();
           appendLog(`rules (deferred): appId="${resolved}" count=${rules.length} hasExecutor=${!!this.executeForTarget}`);
           if (rules.length > 0 && this.executeForTarget) {

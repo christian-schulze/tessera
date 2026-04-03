@@ -163,11 +163,44 @@ export default class TesseraExtension extends Extension {
           ) {
             return true;
           }
+          // Transient windows (e.g. OS file-chooser dialogs) report as
+          // NORMAL type on Wayland but belong to a parent window — treat
+          // them as floating by skipping tiling entirely.
+          const transientFor = metaWindow.get_transient_for();
+          const skipTaskbar = metaWindow.is_skip_taskbar?.() ?? false;
+          const role = metaWindow.get_role?.() ?? "";
+          const wmClass = metaWindow.get_wm_class?.() ?? "";
+          appendLog(
+            `shouldSkipWindow diag: type=${type} transientFor=${transientFor !== null} skipTaskbar=${skipTaskbar} role="${role}" wmClass="${wmClass}" title="${metaWindow.get_title?.() ?? ""}"`
+          );
+          if (transientFor !== null) {
+            return true;
+          }
           // xwaylandvideobridge is an invisible KDE helper window that
           // captures screen content for XWayland apps; it has no visible
           // presence and must not be tiled.
-          const wmClass = metaWindow.get_wm_class?.() ?? "";
           return wmClass === "xwaylandvideobridge";
+        },
+        shouldUntrackWindowDeferred: (window, container) => {
+          const metaWindow = window as Meta.Window;
+          const transientFor = metaWindow.get_transient_for();
+          const skipTaskbar = metaWindow.is_skip_taskbar?.() ?? false;
+          const wmClass = metaWindow.get_wm_class?.() ?? "";
+          appendLog(
+            `shouldUntrackWindowDeferred diag: appId="${container.appId}" title="${container.title}" transientFor=${transientFor !== null} skipTaskbar=${skipTaskbar} wmClass="${wmClass}"`
+          );
+          // On Wayland the XDG portal file-chooser (e.g. Nautilus "Open Files")
+          // reports as a NORMAL window with no transient_for link at initial add
+          // time. By the deferred stage the parent link is sometimes available.
+          if (transientFor !== null) {
+            return () => {
+              // On Wayland, move_resize_frame with 0×0 sends an unconstrained
+              // configure event to the GTK4 client, letting it choose its own
+              // preferred size rather than staying at the tessera-forced tile size.
+              metaWindow.move_resize_frame(false, 0, 0, 0, 0);
+            };
+          }
+          return false;
         },
       }
     );

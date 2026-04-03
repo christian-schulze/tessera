@@ -3,7 +3,7 @@ INSTALL_DIR = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
 REPO_DIR = $(CURDIR)
 BUILD_DIR = $(CURDIR)/dist
 
-.PHONY: help build install uninstall enable disable nested looking-glass lint test check logs logs-nested ipc-tree ipc-debug clean pack
+.PHONY: help build install uninstall enable disable nested looking-glass lint test check logs logs-nested clear-logs ipc-tree ipc-debug clean pack
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -67,6 +67,13 @@ logs: ## Tail Tessera logs
 logs-nested: ## Tail nested GNOME Shell logs
 	@mkdir -p "$(HOME)/.local/state/tessera" && touch "$(HOME)/.local/state/tessera/nested-gnome-shell.log"
 	@tail -f "$(HOME)/.local/state/tessera/nested-gnome-shell.log"
+
+clear-logs: ## Clear all Tessera log files
+	@truncate -s 0 "$(HOME)/.local/state/tessera/tessera.log" 2>/dev/null || true
+	@truncate -s 0 "$(HOME)/.local/state/tessera/nested-gnome-shell.log" 2>/dev/null || true
+	@truncate -s 0 "$(HOME)/.local/state/tessera/debug.log" 2>/dev/null || true
+	@truncate -s 0 "$(HOME)/.local/state/tessera/tree.log" 2>/dev/null || true
+	@echo "Logs cleared"
 
 ipc-tree: ## Fetch container tree via IPC
 	bunx tsx scripts/ipc-run.ts tree
