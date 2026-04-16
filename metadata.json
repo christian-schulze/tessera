@@ -2,6 +2,6 @@
   "uuid": "tessera@tessera.dev",
   "name": "Tessera",
   "description": "i3-like tiling window manager for GNOME Shell",
-  "shell-version": ["49"],
+  "shell-version": ["49", "50"],
   "url": "https://github.com/christian-schulze/tessera"
 }
